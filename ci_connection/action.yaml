@@ -38,4 +38,4 @@ runs:
       python_bin=$(which python3 2>/dev/null || which python)
       # Wait for the connection, if a halt was requested via a label/input
       "$python_bin" "$GITHUB_ACTION_PATH/wait_for_connection.py"
-      echo "halt-trap-script=$GITHUB_ACTION_PATH/wait_for_connection.py" >> $GITHUB_OUTPUT
+      echo "halt-trap-script=$GITHUB_ACTION_PATH/wait_for_connection.py" >> "$GITHUB_OUTPUT"
