@@ -18,10 +18,15 @@ inputs:
     description: 'Should the action wait for user connection from workflow_dispatch?'
     required: false
     default: "no"
+outputs:
+  halt-trap-script:
+    description: "Location of the halt script to run on failure in combination with trap"
+    value: ${{ steps.wait_for_connection.outputs.halt-trap-script }}
 runs:
   using: "composite"
   steps:
   - name: Wait for connection (conditionally)
+    id: wait-for-connection
     shell: bash
     env:
       PYTHONUNBUFFERED: 1
@@ -33,3 +38,4 @@ runs:
       python_bin=$(which python3 2>/dev/null || which python)
       # Wait for the connection, if a halt was requested via a label/input
       "$python_bin" "$GITHUB_ACTION_PATH/wait_for_connection.py"
+      echo "halt-trap-script=$GITHUB_ACTION_PATH/wait_for_connection.py" >> $GITHUB_OUTPUT
