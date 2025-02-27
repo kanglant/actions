@@ -163,7 +163,7 @@ async def wait_for_connection(host: str = "127.0.0.1", port: int = 12455):
       "See go/ml-github-actions:connect for details"
   )
   connect_command = (
-      f"Connection command: \n"
+      f"Connection command:\n"
       f"ml-actions-connect "
       f"--runner={runner_name} "
       f"--ns={ns} "
