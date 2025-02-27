@@ -171,7 +171,7 @@ async def wait_for_connection(host: str = "127.0.0.1", port: int = 12455):
       f"--cluster={cluster} "
       f"--halt_directory={actions_path}"
   )
-  logging.info(connect_command, extra={'bold': True})
+  logging.info(connect_command, extra={"bold": True, "underline": True})
 
   server = await asyncio.start_server(process_messages, host, port)
   terminate = False

@@ -64,19 +64,19 @@ _ANSI = {
 class _ColoredFormatter(logging.Formatter):
   def format(self, record):
     super().format(record)
-    colored_text = self.styled_text(f"{record.levelname}: {record.msg}",
-                                    record)
-    record.msg = self.styled_text(record.msg, record)
+    colored_text = self.style_text(f"{record.levelname}: {record.msg}",
+                                   record)
+    record.msg = self.style_text(record.msg, record)
     file_name = record.filename.removesuffix(".py")
     timestamp = datetime.now().strftime("%H:%M:%S")
     out = f"[{file_name}] {timestamp} {colored_text}"
     if record.exc_text:
-      out += f"\n{self.styled_text(record.exc_text, record)}"
+      out += f"\n{self.style_text(record.exc_text, record)}"
     return out
 
   @staticmethod
-  def styled_text(text: str,
-                  record: logging.LogRecord):
+  def style_text(text: str,
+                 record: logging.LogRecord):
     # Get ANSI Escape codes
     color = _ANSI.get(record.levelname, "")
     styles = [color]
@@ -86,7 +86,9 @@ class _ColoredFormatter(logging.Formatter):
       styles.append(_ANSI["UNDERLINE"])
     styles = "".join(styles)
 
-    return f"{styles}{text}{_ANSI['RESET']}"
+    lines = text.split("\n")
+    out = [f"{styles}{line}{_ANSI['RESET']}" for line in lines]
+    return "\n".join(out)
 
 
 def setup_logging():
