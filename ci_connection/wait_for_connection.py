@@ -158,12 +158,10 @@ async def wait_for_connection(host: str = "127.0.0.1", port: int = 12455):
   if platform.system() == "Windows":
     actions_path = actions_path.replace("\\", "\\\\")
 
-  logging.info(
-      "Googler connection only\n"
-      "See go/ml-github-actions:connect for details"
-  )
+  logging.info("Googler connection only")
+  logging.info("See go/ml-github-actions:connect for details")
   connect_command = (
-      f"Connection command:\n"
+      f"CONNECTION COMMAND:\n"
       f"ml-actions-connect "
       f"--runner={runner_name} "
       f"--ns={ns} "
