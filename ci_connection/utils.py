@@ -70,7 +70,7 @@ class _ColoredFormatter(logging.Formatter):
     file_name = record.filename.removesuffix(".py")
     timestamp = datetime.now().strftime("%H:%M:%S")
     out = f"[{file_name}] " if record.levelno <= logging.DEBUG else ""
-    out += "{timestamp} {colored_text}"
+    out += f"{timestamp} {colored_text}"
     if record.exc_text:
       out += f"\n{self.style_text(record.exc_text, record)}"
     return out
