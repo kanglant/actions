@@ -47,25 +47,24 @@ _SHOW_DEBUG = bool(
 
 
 _ANSI = {
-    # Colors
-    "DEBUG": "\033[94m",     # Light Blue
-    "INFO": "\033[92m",      # Light Green
-    "WARNING": "\033[93m",   # Light Yellow
-    "CRITICAL": "\033[91m",  # Red
-    "ERROR": "\033[91m",     # Red
-    # Styles
-    "BOLD": "\033[1m",
-    "UNDERLINE": "\033[4m",
-    # Reset the style/coloring
-    "RESET": "\033[0m",
+  # Colors
+  "DEBUG": "\033[94m",  # Light Blue
+  "INFO": "\033[92m",  # Light Green
+  "WARNING": "\033[93m",  # Light Yellow
+  "CRITICAL": "\033[91m",  # Red
+  "ERROR": "\033[91m",  # Red
+  # Styles
+  "BOLD": "\033[1m",
+  "UNDERLINE": "\033[4m",
+  # Reset the style/coloring
+  "RESET": "\033[0m",
 }
 
 
 class _ColoredFormatter(logging.Formatter):
   def format(self, record):
     super().format(record)
-    colored_text = self.style_text(f"{record.levelname}: {record.msg}",
-                                   record)
+    colored_text = self.style_text(f"{record.levelname}: {record.msg}", record)
     record.msg = self.style_text(record.msg, record)
     file_name = record.filename.removesuffix(".py")
     timestamp = datetime.now().strftime("%H:%M:%S")
@@ -76,8 +75,7 @@ class _ColoredFormatter(logging.Formatter):
     return out
 
   @staticmethod
-  def style_text(text: str,
-                 record: logging.LogRecord):
+  def style_text(text: str, record: logging.LogRecord) -> str:
     # Get ANSI Escape codes
     color = _ANSI.get(record.levelname, "")
     styles = [color]
