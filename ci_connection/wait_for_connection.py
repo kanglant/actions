@@ -88,7 +88,7 @@ def should_halt_for_connection(wait_regardless: bool = False) -> bool:
   else:
     logging.debug(f"No {HALT_ALWAYS_LABEL!r} label found on the PR")
 
-  attempt = int(os.getenv("GITHUB_RUN_ATTEMPT", 1))
+  attempt = int(os.getenv("GITHUB_RUN_ATTEMPT"))
   if attempt > 1 and HALT_ON_RETRY_LABEL in labels:
     logging.info(
       f"Halt for connection requested via presence "
