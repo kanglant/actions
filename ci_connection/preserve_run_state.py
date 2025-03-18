@@ -49,9 +49,9 @@ class StateInfo(TypedDict):
 def parse_cli_args() -> argparse.Namespace:
   parser = argparse.ArgumentParser(
     description="Preserve the current execution state of a shell script. "
-                "Useful for saving the current state of a workflow, so that "
-                "it can be later reproduced within a remote session, on the "
-                "same runner that is running the workflow in question.",
+    "Useful for saving the current state of a workflow, so that "
+    "it can be later reproduced within a remote session, on the "
+    "same runner that is running the workflow in question.",
     usage=(
       "python preserve_run_state.py "
       "--shell-command=<relevant-command> "
@@ -63,15 +63,15 @@ def parse_cli_args() -> argparse.Namespace:
     dest="shell_command",
     required=False,
     help="A command which should be saved as the last one executed, "
-         "typically a failing one. "
-         "Falls back to $LAST_COMMAND, if not specified."
+    "typically a failing one. "
+    "Falls back to $LAST_COMMAND, if not specified.",
   )
   parser.add_argument(
     "--execution-dir",
     required=False,
     dest="execution_dir",
     help="Directory at the time of command execution.\n"
-         "If not passed, saves the directory from which this script was called."
+    "If not passed, saves the directory from which this script was called.",
   )
   parser.add_argument(
     "--save-env",
@@ -79,8 +79,8 @@ def parse_cli_args() -> argparse.Namespace:
     action="store_true",
     default=True,
     help="Save the environment variables, and their values.\n"
-         "Some variables may be excluded due to their "
-         "potentially sensitive nature. True by default."
+    "Some variables may be excluded due to their "
+    "potentially sensitive nature. True by default.",
   )
   parser.add_argument(
     "--no-save-env",
@@ -97,7 +97,7 @@ def parse_cli_args() -> argparse.Namespace:
     "--env-vars-allowlist",
     dest="env_vars_allowlist",
     help="A comma-separated list of environment variables to explicitly allow.\n"
-         "If specified, only these variables (minus any in the denylist) will be saved."
+    "If specified, only these variables (minus any in the denylist) will be saved.",
   )
   parser.add_argument(
     "--out-dir",
