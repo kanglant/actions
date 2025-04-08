@@ -29,6 +29,10 @@ runs:
     # The calling workflow shouldn't fail in case this step does
     continue-on-error: true
     run: |
+      # A base uv python might need urlib3 
+      if [ -n "$UV_PYTHON" ]; then
+        uv pip install urllib3 
+      fi
       # Pick an existing Python alias
       python_bin=$(which python3 2>/dev/null || which python)
       # Wait for the connection, if a halt was requested via a label/input
