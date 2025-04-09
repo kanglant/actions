@@ -64,10 +64,10 @@ jobs:
           set -x
           echo "Real job here..."
       # Halt for connection if workflow dispatch is told to or if it is a retry with the label halt_on_retry
-      - name: Install the latest version of uv and set the python version
+      - name: Install uv
         uses: astral-sh/setup-uv@v5
-        with:
-          python-version: ${{ matrix.python-version }}
+      - name: Set up Python
+        run: uv python install 3.10
       - name: Wait For Connection
         uses: ./ci_connection/
         with:
