@@ -67,7 +67,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
       - name: Set up Python
-        run: uv python install 3.10
+        run: uv python install 3.10 --default --preview
       - name: Wait For Connection
         uses: ./ci_connection/
         with:
