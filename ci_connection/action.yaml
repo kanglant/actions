@@ -31,11 +31,11 @@ runs:
         PYTHONUNBUFFERED: 1
         HALT_DISPATCH_INPUT: ${{ inputs.halt-dispatch-input }}
       run: |
-        set +e
         python_bin=$(which python3 2>/dev/null || which python)
-        "$python_bin" "$GITHUB_ACTION_PATH/wait_for_connection.py"
-        set -e
-        echo "exit_code=$?" >>"$GITHUB_OUTPUT"
+        # Attempt to run; capture exit code of script, or non-zero if python missing/fails
+        [[ -n "$python_bin" ]] && "$python_bin" "$GITHUB_ACTION_PATH/wait_for_connection.py"
+        exit_code=$?
+        echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
 
     # If Python fails, or isn't available, fall back to using Bash for a simpler keep-alive loop
     - name: Wait for connection (shell-based fallback in case Python is not available, or fails)
