@@ -35,7 +35,7 @@ runs:
       python_bin=$(which python3 2>/dev/null || which python)
       # Attempt to run; capture exit code of script, or non-zero if python missing/fails
       # [[ -n "$python_bin" ]] && "$python_bin" "$GITHUB_ACTION_PATH/wait_for_connection.py"
-      exit_code="$?"
+      # exit_code="$?"
       # echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
       echo "Finished the steppy-step, moving on..."
 
