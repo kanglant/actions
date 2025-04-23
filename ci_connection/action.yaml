@@ -21,7 +21,6 @@ inputs:
 runs:
   using: composite
   steps:
-
     # First try to set up waiting with Python, as it has some QoL features, like mirroring the `env` state, etc.
     - name: Wait for connection
       id: primary
@@ -33,9 +32,10 @@ runs:
       run: |
         python_bin=$(which python3 2>/dev/null || which python)
         # Attempt to run; capture exit code of script, or non-zero if python missing/fails
-        [[ -n "$python_bin" ]] && "$python_bin" "$GITHUB_ACTION_PATH/wait_for_connection.py"
-        exit_code=$?
+        # [[ -n "$python_bin" ]] && "$python_bin" "$GITHUB_ACTION_PATH/wait_for_connection.py"
+        exit_code="$?"
         echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
+        echo "Finished the steppy-step, moving on..."
 
     # If Python fails, or isn't available, fall back to using Bash for a simpler keep-alive loop
     - name: Wait for connection (shell-based fallback in case Python is not available, or fails)
