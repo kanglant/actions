@@ -31,6 +31,7 @@ runs:
     # The calling workflow shouldn't fail in case this step does
     continue-on-error: true
     run: |
+      set +e
       # Pick an existing Python alias, if any exists
       python_bin=$(which python3 2>/dev/null || which python)
       # Attempt to run; capture exit code of script, or non-zero if python missing/fails
