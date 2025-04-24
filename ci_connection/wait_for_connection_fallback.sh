@@ -17,11 +17,24 @@
 set -euo pipefail
 
 SENTINEL_FILE="$RUNNER_TEMP/_debug_wait.flag"
-ENTRYPOINT="$GITHUB_ACTION_PATH/entrypoint.sh"
-
 echo "WAIT" >"$SENTINEL_FILE"
 
-CONNECT_CMD="ml-actions-connect --runner=${RUNNER_NAME} --ns=${NS} --loc=${LOC} --cluster=${CLUSTER} --halt_directory=\"${HALT_DIR}\" --entrypoint=\"bash ${ENTRYPOINT} ${SENTINEL_FILE} &\""
+ENTRYPOINT="$GITHUB_ACTION_PATH/entrypoint.sh"
+
+PARENT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+HALT_DIR="${CONNECTION_HALT_DIR:-${PARENT_DIR}}"
+
+if [[ "$(uname -s)" == CYGWIN_NT* || "$(uname -s)" == MSYS_NT* ]]; then
+  HALT_DIR=$(cygpath -m "$HALT_DIR")
+fi
+
+CONNECT_CMD="ml-actions-connect \
+--runner=${CONNECTION_POD_NAME} \
+--ns=${CONNECTION_NS} \
+--loc=${CONNECTION_LOCATION} \
+--cluster=${CONNECTION_CLUSTER} \
+--halt_directory=\"${HALT_DIR}\" \
+--entrypoint=\"bash ${ENTRYPOINT} ${SENTINEL_FILE} &\""
 BOLD_GREEN_UNDERLINE='\033[1;4;32m'
 RESET='\033[0m'
 
