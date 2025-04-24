@@ -17,12 +17,44 @@
 # Used in conjunction with the fallback waiting loop, when Python doesn't work or isn't available.
 # Keep‑alive pinger; sends SHUTDOWN when it exits.
 
+#!/bin/bash
+
+set -uo pipefail
+
 SENTINEL="$1"
 [ -n "$SENTINEL" ] || { echo "Usage: $0 <sentinel-file>"; exit 1; }
 
-keep()   { echo "WAIT"     >"$SENTINEL"; }
-finish() { echo "SHUTDOWN" >"$SENTINEL"; }
-trap finish EXIT
+keep_alive_loop() {
+  trap 'echo "SHUTDOWN" >"$SENTINEL"' EXIT
 
-keep
-while true; do sleep 60; keep; done
+  echo "WAIT" >"$SENTINEL"
+
+  while true; do
+    sleep 60
+    echo "WAIT" >"$SENTINEL"
+  done
+}
+
+# Run the keep-alive loop in the background
+keep_alive_loop &
+# Capture the Process ID (PID) of the background loop
+_keepalive_pid=$!
+
+# Run on exit, so, whenever the user ends their `bash -il` session,
+# or any other termination of the script
+_main_cleanup() {
+  echo "[Entrypoint] Interactive session ended or signal received. Cleaning up keep-alive ($_keepalive_pid)..." >&2
+  # Send TERM signal to the background process
+  kill "$_keepalive_pid" 2>/dev/null || true
+  # Wait for the keep-alive process to be terminated fully, so it can run its own TRAP
+  wait "$_keepalive_pid" 2>/dev/null || true
+  echo "[Entrypoint] Cleanup complete." >&2
+}
+trap _main_cleanup EXIT
+
+# Launch the interactive shell in the foreground
+echo "[Entrypoint] Starting interactive shell for user. Keep-alive running in background (PID: $_keepalive_pid)." >&2
+echo "[Entrypoint] Type 'exit' or Ctrl+D when done." >&2
+bash -il
+
+exit 0
