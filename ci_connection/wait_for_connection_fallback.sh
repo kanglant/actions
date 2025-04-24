@@ -34,7 +34,7 @@ CONNECT_CMD="ml-actions-connect \
 --loc=${CONNECTION_LOCATION} \
 --cluster=${CONNECTION_CLUSTER} \
 --halt_directory=\"${HALT_DIR}\" \
---entrypoint=\"bash ${ENTRYPOINT} ${SENTINEL_FILE} &\""
+--entrypoint=\"bash ${ENTRYPOINT} ${SENTINEL_FILE}\""
 BOLD_GREEN_UNDERLINE='\033[1;4;32m'
 RESET='\033[0m'
 
