@@ -50,12 +50,11 @@ echo "----------------------------------------------------------------------"
 echo
 
 # --- Monitoring Logic ---
-initial_timeout=600    # 10 min to establish the first touch
-inactive_limit=300     # 5 min keep‑alive gap after connection
+initial_timeout=6000    # 100 min to establish the first touch
+keep_alive_interval=300     # 5 min keep‑alive gap after connection
 
 echo "Sentinel file on runner: ${SENTINEL_FILE}"
 echo "Will wait $((initial_timeout / 60)) minutes (${initial_timeout} seconds) for the initial connection."
-echo "After connection, will wait up to $((inactive_limit / 60)) minutes (${inactive_limit} seconds) between keep-alives."
 echo
 
 start_time=$(date +%s)
@@ -93,8 +92,8 @@ while true; do
   # Check timeouts based on connection state
   if $connected; then
     # Post‑connect keep‑alive timeout
-    if (( $(date +%s) - last_update >= inactive_limit )); then
-      echo "No keep-alive received for $inactive_limit seconds – aborting."
+    if (( $(date +%s) - last_update >= keep_alive_interval )); then
+      echo "No keep-alive received for $keep_alive_interval seconds – aborting."
       exit 0
     fi
   else
@@ -108,7 +107,7 @@ while true; do
   # Refresh last_update on every client write after initial connection
   # and print keep-alive message
   if $connected && (( current_mtime > last_update )); then
-    echo "Keep-alive received at $(date '+%Y-%m-%d %H:%M:%S'). Resetting ${inactive_limit}s timer."
+    echo "Keep-alive received at $(date '+%Y-%m-%d %H:%M:%S'). Resetting ${keep_alive_interval}s timer."
     last_update=$current_mtime
   fi
 done
