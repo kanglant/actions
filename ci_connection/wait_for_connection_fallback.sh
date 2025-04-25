@@ -3,8 +3,8 @@
 set -euo pipefail
 
 # --- Configuration ---
-SENTINEL_FILE="${RUNNER_TEMP}/_debug_wait.flag" # Example, ensure RUNNER_TEMP is set
-GITHUB_ACTION_PATH="${GITHUB_ACTION_PATH:-.}"  # Example, ensure GITHUB_ACTION_PATH is set
+SENTINEL_FILE="${RUNNER_TEMP}/_debug_wait.flag"
+GITHUB_ACTION_PATH="${GITHUB_ACTION_PATH:-.}"
 
 : "${CONNECTION_POD_NAME?Error: CONNECTION_POD_NAME is not set}"
 : "${CONNECTION_NS?Error: CONNECTION_NS is not set}"
@@ -16,8 +16,6 @@ echo "WAIT" >"$SENTINEL_FILE" # Create/overwrite sentinel file
 
 ENTRYPOINT_SCRIPT_NAME="entrypoint.sh" # Assume entrypoint.sh is directly in GITHUB_ACTION_PATH
 ENTRYPOINT="$GITHUB_ACTION_PATH/$ENTRYPOINT_SCRIPT_NAME"
-
-PARENT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 
 # Check if this is running in a Cygwin/MSYS environment on Windows
 if [[ "$(uname -s)" == CYGWIN_NT* || "$(uname -s)" == MSYS_NT* ]]; then
@@ -38,17 +36,17 @@ RESET='\033[0m'
 
 # --- User Instructions ---
 echo "Python-based connection didn't work. Switching to Bash-based one..."
-echo "Googler connection only"
+echo "Googler connection only_debug_wait"
 echo "See go/ml-github-actions:connect for details"
-echo "----------------------------------------------------------------------"
 echo "To connect, run the following command in your local terminal:"
-echo -e "${BOLD_GREEN_UNDERLINE}${CONNECT_CMD}${RESET}"
-echo "----------------------------------------------------------------------"
+echo -e "${BOLD_GREEN_UNDERLINE}----------------------------------------------------------------------${RESET}"
+echo "${CONNECT_CMD}"
+echo -e "${BOLD_GREEN_UNDERLINE}----------------------------------------------------------------------${RESET}"
 echo
 
 # --- Monitoring Logic ---
-initial_timeout=6000    # 100 min to establish the first touch
-keep_alive_interval=300     # 5 min keep‑alive gap after connection
+initial_timeout=600    # 10 minutes to establish the first touch
+keep_alive_interval=300     # 5 minutes keep‑alive gap after connection
 
 echo "Sentinel file on runner: ${SENTINEL_FILE}"
 echo "Will wait $((initial_timeout / 60)) minutes (${initial_timeout} seconds) for the initial connection."
