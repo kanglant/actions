@@ -52,7 +52,7 @@ _main_cleanup() {
 }
 trap _main_cleanup EXIT
 
-# Launch the interactive shell in the foreground
+# Launch an interactive shell in the foreground
 echo "[Entrypoint] Starting interactive shell for user. Keep-alive running in background (PID: $_keepalive_pid)." >&2
 echo "[Entrypoint] Type 'exit' or Ctrl+D when done." >&2
 bash -il

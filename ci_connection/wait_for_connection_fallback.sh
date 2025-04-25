@@ -1,95 +1,114 @@
 #!/usr/bin/env bash
 
-# Copyright 2025 Google LLC
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     https://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 set -euo pipefail
 
-SENTINEL_FILE="$RUNNER_TEMP/_debug_wait.flag"
-echo "WAIT" >"$SENTINEL_FILE"
+# --- Configuration ---
+SENTINEL_FILE="${RUNNER_TEMP}/_debug_wait.flag" # Example, ensure RUNNER_TEMP is set
+GITHUB_ACTION_PATH="${GITHUB_ACTION_PATH:-.}"  # Example, ensure GITHUB_ACTION_PATH is set
 
-ENTRYPOINT="$GITHUB_ACTION_PATH/entrypoint.sh"
+: "${CONNECTION_POD_NAME?Error: CONNECTION_POD_NAME is not set}"
+: "${CONNECTION_NS?Error: CONNECTION_NS is not set}"
+: "${CONNECTION_LOCATION?Error: CONNECTION_LOCATION is not set}"
+: "${CONNECTION_CLUSTER?Error: CONNECTION_CLUSTER is not set}"
+
+# --- Path Setup ---
+echo "WAIT" >"$SENTINEL_FILE" # Create/overwrite sentinel file
+
+ENTRYPOINT_SCRIPT_NAME="entrypoint.sh" # Assume entrypoint.sh is directly in GITHUB_ACTION_PATH
+ENTRYPOINT="$GITHUB_ACTION_PATH/$ENTRYPOINT_SCRIPT_NAME"
 
 PARENT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 HALT_DIR="${CONNECTION_HALT_DIR:-${PARENT_DIR}}"
 
+# Check if this is running in a Cygwin/MSYS environment on Windows
 if [[ "$(uname -s)" == CYGWIN_NT* || "$(uname -s)" == MSYS_NT* ]]; then
   HALT_DIR=$(cygpath -m "$HALT_DIR")
+  ENTRYPOINT=$(cygpath -m "$ENTRYPOINT")
+  SENTINEL_FILE=$(cygpath -m "$SENTINEL_FILE")
 fi
 
-CONNECT_CMD="ml-actions-connect \
---runner=${CONNECTION_POD_NAME} \
---ns=${CONNECTION_NS} \
---loc=${CONNECTION_LOCATION} \
---cluster=${CONNECTION_CLUSTER} \
---halt_directory=\"${HALT_DIR}\" \
---entrypoint=\"bash ${ENTRYPOINT} ${SENTINEL_FILE}\""
+# --- Build Connect Command ---
+CONNECT_CMD="ml-actions-connect \\
+--runner=${CONNECTION_POD_NAME} \\
+--ns=${CONNECTION_NS} \\
+--loc=${CONNECTION_LOCATION} \\
+--cluster=${CONNECTION_CLUSTER} \\
+--halt_directory=\"${HALT_DIR}\" \\
+--entrypoint=\"bash '${ENTRYPOINT}' '${SENTINEL_FILE}'\""
+
 BOLD_GREEN_UNDERLINE='\033[1;4;32m'
 RESET='\033[0m'
 
+# --- User Instructions ---
 echo "Python-based connection didn't work. Switching to Bash-based one..."
 echo "Googler connection only"
 echo "See go/ml-github-actions:connect for details"
-echo -e "${BOLD_GREEN_UNDERLINE}${CONNECT_CMD}${RESET}\n"
-
-echo "Sentinel file on runner: ${SENTINEL_FILE}"
+echo "----------------------------------------------------------------------"
+echo "To connect, run the following command in your local terminal:"
+echo -e "${BOLD_GREEN_UNDERLINE}${CONNECT_CMD}${RESET}"
+echo "----------------------------------------------------------------------"
 echo
 
+# --- Monitoring Logic ---
 initial_timeout=600    # 10 min to establish the first touch
 inactive_limit=300     # 5 min keep‑alive gap after connection
+
+echo "Sentinel file on runner: ${SENTINEL_FILE}"
+echo "Will wait $((initial_timeout / 60)) minutes (${initial_timeout} seconds) for the initial connection."
+echo "After connection, will wait up to $((inactive_limit / 60)) minutes (${inactive_limit} seconds) between keep-alives."
+echo
+
 start_time=$(date +%s)
-initial_mtime=$(stat -c %Y "$SENTINEL_FILE")
+# Ensure file exists before stat, handle potential race condition
+if [[ ! -f "$SENTINEL_FILE" ]]; then
+    echo "Error: Sentinel file '$SENTINEL_FILE' disappeared before starting wait." >&2
+    exit 1
+fi
+initial_mtime=$(stat -c %Y "$SENTINEL_FILE") # Assumes GNU stat
 connected=false
-last_update=$start_time
+last_update=$start_time # Initialize last_update relative to script start initially
 
 echo "Waiting for connection..."
 while true; do
   sleep 5
-  [[ -f "$SENTINEL_FILE" ]] || { echo "Sentinel missing – abort."; exit 1; }
+  [[ -f "$SENTINEL_FILE" ]] || { echo "Sentinel file missing – aborting."; exit 1; }
 
-  current_mtime=$(stat -c %Y "$SENTINEL_FILE")
-  state=$(cat "$SENTINEL_FILE" 2>/dev/null || true)
+  current_mtime=$(stat -c %Y "$SENTINEL_FILE" 2>/dev/null || echo "$initial_mtime") # Handle stat errors gracefully
+  # If stat failed, current_mtime retains previous value, loop continues checking state/timeouts
 
-  # explicit shutdown from entry‑point
+  state=$(cat "$SENTINEL_FILE" 2>/dev/null || echo "UNKNOWN")
+
   if [[ "$state" == "SHUTDOWN" ]]; then
     echo "SHUTDOWN received – exiting."
     exit 0
   fi
 
-  # detect first touch from client
-  if ! $connected && (( current_mtime != initial_mtime )); then
-    echo "Connection established."
+  # Detect first touch from client
+  if ! $connected && (( current_mtime > initial_mtime )); then
+    echo "Connection established at $(date '+%Y-%m-%d %H:%M:%S')."
     connected=true
     last_update=$current_mtime
   fi
 
+  # Check timeouts based on connection state
   if $connected; then
-    # post‑connect keep‑alive
+    # Post‑connect keep‑alive timeout
     if (( $(date +%s) - last_update >= inactive_limit )); then
-      echo "No keep‑alive for $inactive_limit s – aborting."
+      echo "No keep-alive received for $inactive_limit seconds – aborting."
       exit 0
     fi
   else
-    # still in pre‑connect window
+    # Still in pre‑connect window timeout
     if (( $(date +%s) - start_time >= initial_timeout )); then
-      echo "No connection established within 10 minutes – exiting..."
+      echo "No connection established within $((initial_timeout / 60)) minutes – exiting..."
       exit 0
     fi
   fi
 
-  # refresh last_update on every client write
-  if (( current_mtime != last_update )); then
+  # Refresh last_update on every client write after initial connection
+  # and print keep-alive message
+  if $connected && (( current_mtime > last_update )); then
+    echo "Keep-alive received at $(date '+%Y-%m-%d %H:%M:%S'). Resetting ${inactive_limit}s timer."
     last_update=$current_mtime
   fi
 done
