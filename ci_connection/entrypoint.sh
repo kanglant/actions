@@ -15,9 +15,7 @@
 # limitations under the License.
 
 # Used in conjunction with the fallback waiting loop, when Python doesn't work or isn't available.
-# Keep‑alive pinger; sends SHUTDOWN when it exits.
-
-#!/bin/bash
+# Basic shell setup. Keep‑alive pinger; sends SHUTDOWN when it exits.
 
 set -uo pipefail
 
@@ -35,16 +33,13 @@ keep_alive_loop() {
   done
 }
 
-# Run the keep-alive loop in the background
-keep_alive_loop &
-# Capture the Process ID (PID) of the background loop
-_keepalive_pid=$!
+keep_alive_loop & # Run the keep-alive loop in the background
+_keepalive_pid=$! # Capture the Process ID (PID) of the background loop
 
 # Run on exit, so, whenever the user ends their `bash -il` session,
 # or any other termination of the script
 _main_cleanup() {
   echo "[Entrypoint] Interactive session ended or signal received. Cleaning up keep-alive ($_keepalive_pid)..." >&2
-  # Send TERM signal to the background process
   kill "$_keepalive_pid" 2>/dev/null || true
   # Wait for the keep-alive process to be terminated fully, so it can run its own TRAP
   wait "$_keepalive_pid" 2>/dev/null || true

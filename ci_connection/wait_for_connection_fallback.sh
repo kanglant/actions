@@ -18,11 +18,9 @@ ENTRYPOINT_SCRIPT_NAME="entrypoint.sh" # Assume entrypoint.sh is directly in GIT
 ENTRYPOINT="$GITHUB_ACTION_PATH/$ENTRYPOINT_SCRIPT_NAME"
 
 PARENT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
-HALT_DIR="${CONNECTION_HALT_DIR:-${PARENT_DIR}}"
 
 # Check if this is running in a Cygwin/MSYS environment on Windows
 if [[ "$(uname -s)" == CYGWIN_NT* || "$(uname -s)" == MSYS_NT* ]]; then
-  HALT_DIR=$(cygpath -m "$HALT_DIR")
   ENTRYPOINT=$(cygpath -m "$ENTRYPOINT")
   SENTINEL_FILE=$(cygpath -m "$SENTINEL_FILE")
 fi
@@ -33,8 +31,7 @@ CONNECT_CMD="ml-actions-connect \\
 --ns=${CONNECTION_NS} \\
 --loc=${CONNECTION_LOCATION} \\
 --cluster=${CONNECTION_CLUSTER} \\
---halt_directory=\"${HALT_DIR}\" \\
---entrypoint=\"bash '${ENTRYPOINT}' '${SENTINEL_FILE}'\""
+--entrypoint=\"bash ${ENTRYPOINT} ${SENTINEL_FILE}\""
 
 BOLD_GREEN_UNDERLINE='\033[1;4;32m'
 RESET='\033[0m'
@@ -107,7 +104,7 @@ while true; do
   # Refresh last_update on every client write after initial connection
   # and print keep-alive message
   if $connected && (( current_mtime > last_update )); then
-    echo "Keep-alive received at $(date '+%Y-%m-%d %H:%M:%S'). Resetting ${keep_alive_interval}s timer."
+    echo "Keep-alive received at $(date '+%Y-%m-%d %H:%M:%S'). Resetting the ${keep_alive_interval}s keep-alive timer."
     last_update=$current_mtime
   fi
 done
