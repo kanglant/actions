@@ -251,8 +251,7 @@ def construct_connection_command() -> tuple[str, str]:
   )
   python_bin = sys.executable
   main_connect_command = (
-    f"{connect_command} "
-    f'--entrypoint="{python_bin} {actions_path}/notify_connection.py"'
+    f'{connect_command} --entrypoint="{python_bin} {actions_path}/notify_connection.py"'
   )
   fallback_connect_command = f'{connect_command} --entrypoint="bash -i"'
 

@@ -19,7 +19,7 @@
 # These utils are focused on making sure a suitable Python is available, and
 # used, for the ML CI connection backend and frontend.
 
-set -exuo pipefail
+set -euo pipefail
 
 UV_VERSION="0.6.17"
 UV_RELEASE_BASE_URL="https://github.com/astral-sh/uv/releases/download"
@@ -239,7 +239,10 @@ suitable_python_exists() {
   # There is a potential of false positives here, but it's extremely low and
   # therefore acceptable.
   setup_py_loc="${pythonLocation:-}"
-  [[ -z "$setup_py_loc" ]] && return 0
+  if [[ -z "$setup_py_loc" ]]; then
+    echo "$py_exe"
+    return 0
+  fi
   # Check if found python matches setup-python location
   canon_py_path=$(readlink -f "$py_exe" 2>/dev/null)
    # Is setup-python, unsuitable
