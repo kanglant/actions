@@ -30,22 +30,4 @@ runs:
       HALT_DISPATCH_INPUT: ${{ inputs.halt-dispatch-input }}
     # The calling workflow shouldn't fail in case this step does
     continue-on-error: true
-    run: |
-      set +e
-      # Pick an existing Python alias, if any exists
-      python_bin=$(which python3 2>/dev/null || which python)
-      # Attempt to run; capture exit code of script, or non-zero if Python is missing/fails
-      if [[ -n "$python_bin" ]]; then
-        "$python_bin" "$GITHUB_ACTION_PATH/wait_for_connection.py"
-        echo "exit_code=$?" >> "$GITHUB_OUTPUT"
-      else
-        echo "exit_code=1" >> "$GITHUB_OUTPUT"
-      fi
-      set -e
-
-  # If Python fails, or isn't available, fall back to using Bash for a simpler keep-alive loop
-  - name: Wait for connection (shell-based fallback in case Python is not available, or fails)
-    if: ${{ steps.primary.outputs.exit_code != '0' }}
-    continue-on-error: true
-    shell: bash
-    run: bash "$GITHUB_ACTION_PATH/wait_for_connection_fallback.sh"
+    run: bash "$GITHUB_ACTION_PATH/wait_for_connection.sh"

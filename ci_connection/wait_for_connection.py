@@ -19,8 +19,11 @@ import json
 import logging
 import os
 import shutil
+import sys
 import time
 import platform
+
+from typing import Optional
 
 import preserve_run_state
 import utils
@@ -45,26 +48,13 @@ def _is_true_like_env_var(var_name: str) -> bool:
   return False
 
 
-def should_halt_for_connection(wait_regardless: bool = False) -> bool:
-  """Check if the workflow should wait, due to inputs, vars, and labels."""
-
-  logging.info("Checking if the workflow should be halted for a connection...")
-
-  if wait_regardless:
-    logging.info("Wait for connection requested explicitly via code")
-    return True
-
-  explicit_halt_requested = _is_true_like_env_var("HALT_DISPATCH_INPUT")
-  if explicit_halt_requested:
-    logging.info(
-      "Halt for connection requested via explicit `halt-dispatch-input` input"
-    )
-    return True
-  else:
-    logging.debug("No `halt-dispatch-input` detected")
+def check_if_labels_require_connection_halting() -> Optional[bool]:
+  """Check whether the necessary conditions, involving labels, are met."""
 
   # Check if any of the relevant labels are present
   labels = retrieve_labels(print_to_stdout=False)
+  if labels is None:
+    return None
 
   if HALT_ON_ERROR_LABEL in labels and os.path.exists(utils.STATE_INFO_PATH):
     logging.info(
@@ -105,6 +95,40 @@ def should_halt_for_connection(wait_regardless: bool = False) -> bool:
       logging.debug(
         f"Found the {HALT_ON_RETRY_LABEL!r} label, but this is the first attempt"
       )
+
+  return False
+
+
+def should_halt_for_connection(wait_regardless: bool = False) -> bool:
+  """Check if the workflow should wait, due to inputs, vars, and labels."""
+
+  logging.info("Checking if the workflow should be halted for a connection...")
+
+  if wait_regardless:
+    logging.info("Wait for connection requested explicitly via code")
+    return True
+
+  explicit_halt_requested = _is_true_like_env_var("HALT_DISPATCH_INPUT")
+  if explicit_halt_requested:
+    logging.info(
+      "Halt for connection requested via explicit `halt-dispatch-input` input"
+    )
+    return True
+  else:
+    logging.debug("No `halt-dispatch-input` detected")
+
+  # NOTE: If other methods are added for checking whether a connection should be
+  # waited for, they MUST go above this check, or this check must be changed to
+  # not be fatal
+  labels_require_halting = check_if_labels_require_connection_halting()
+  if labels_require_halting:
+    return True
+  if labels_require_halting is None:
+    logging.critical(
+      "Exiting due to inability to retrieve PR labels, and no "
+      "other halting conditions being met"
+    )
+    sys.exit(1)
 
   return False
 
@@ -153,11 +177,24 @@ async def process_messages(reader, writer):
 
 async def wait_for_connection(host: str = "127.0.0.1", port: int = 12455):
   # Print out the data required to connect to this VM
-  connect_command = construct_connection_command()
+  connect_command, fallback_connect_command = construct_connection_command()
 
   logging.info("Googler connection only")
   logging.info("See go/ml-github-actions:connect for details")
+  logging.info("-" * 100)
   logging.info(connect_command, extra={"bold": True, "underline": True})
+  logging.info("-" * 100)
+
+  logging.info("Fallback command (Bash-based):")
+  logging.info(fallback_connect_command)
+  logging.info(
+    "If the Python-based command doesn't work, use the Bash fallback above.\n"
+    "Using this fallback will NOT let the runner know a connection "
+    "was made, and will NOT cause the runner wait automatically.\n"
+    "For the fallback, add a wait/sleep somewhere after the "
+    "'Wait for Connection' in your workflow manually, or use a different "
+    "Python for this step."
+  )
 
   server = await asyncio.start_server(process_messages, host, port)
   terminate = False
@@ -192,7 +229,7 @@ async def wait_for_connection(host: str = "127.0.0.1", port: int = 12455):
     logging.info("Waiting process terminated.")
 
 
-def construct_connection_command() -> str:
+def construct_connection_command() -> tuple[str, str]:
   runner_name = os.getenv("CONNECTION_POD_NAME")
   cluster = os.getenv("CONNECTION_CLUSTER")
   location = os.getenv("CONNECTION_LOCATION")
@@ -211,9 +248,15 @@ def construct_connection_command() -> str:
     f"--ns={ns} "
     f"--loc={location} "
     f"--cluster={cluster} "
-    f"--halt_directory={actions_path} "
   )
-  return connect_command
+  python_bin = sys.executable
+  main_connect_command = (
+    f"{connect_command} "
+    f'--entrypoint="{python_bin} {actions_path}/notify_connection.py"'
+  )
+  fallback_connect_command = f'{connect_command} --entrypoint="bash -i"'
+
+  return main_connect_command, fallback_connect_command
 
 
 def main(wait_regardless: bool = False):
