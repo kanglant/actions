@@ -5,7 +5,7 @@ on:
   pull_request:
     paths:
     - ci_connection
-    - .github/workflows/wait-for-connection-bash-fallback-test.yaml
+    - .github/workflows/wait-for-connection-no-python.yaml
     branches:
       - main
   workflow_dispatch:

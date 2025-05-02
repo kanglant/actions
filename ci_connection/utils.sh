@@ -19,7 +19,7 @@
 # These utils are focused on making sure a suitable Python is available, and
 # used, for the ML CI connection backend and frontend.
 
-set -euo pipefail
+set -exuo pipefail
 
 UV_VERSION="0.6.17"
 UV_RELEASE_BASE_URL="https://github.com/astral-sh/uv/releases/download"
