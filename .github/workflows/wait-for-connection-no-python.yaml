@@ -1,6 +1,8 @@
 # A workflow to test waiting for remote connections to the runner.
-name: Connection Test with the Bash-based fallback
-# This is a copy of the wait-for-connection-test.yaml, but with a Python-less container.
+name: Connection Test without pre-installed Python
+# This is a copy of the wait-for-connection-test.yaml,
+# but with a Python-less container.
+# The connection step should seamlessly find, or install, and use a suitable one.
 on:
   pull_request:
     paths:

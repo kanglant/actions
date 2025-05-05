@@ -48,6 +48,31 @@ def _is_true_like_env_var(var_name: str) -> bool:
   return False
 
 
+def check_if_debug_logging_enabled_and_job_type_is_scheduled() -> bool:
+  """
+  Checks if GitHub Actions debug logging is enabled AND the workflow
+  was triggered by a 'schedule' event.
+  """
+  actions_runners_debug_value = os.getenv("ACTIONS_RUNNER_DEBUG")
+  actions_runner_debug_is_enabled = actions_runners_debug_value == "1"
+
+  event_name = os.getenv("GITHUB_EVENT_NAME")
+  is_scheduled_job = event_name == "schedule"
+
+  result = actions_runner_debug_is_enabled and is_scheduled_job
+  if result:
+    logging.info(f"Job is of the scheduled type, and debugging is enabled")
+  else:
+    if not is_scheduled_job:
+      logging.debug("Job is not of the scheduled type")
+    if not actions_runner_debug_is_enabled:
+      logging.debug(
+        f"Job does not have logging enabled: "
+        f"ACTIONS_RUNNER_DEBUG={actions_runner_debug_is_enabled}"
+      )
+  return result
+
+
 def check_if_labels_require_connection_halting() -> Optional[bool]:
   """Check whether the necessary conditions, involving labels, are met."""
 
@@ -64,7 +89,7 @@ def check_if_labels_require_connection_halting() -> Optional[bool]:
     )
     return True
   else:
-    if not HALT_ON_ERROR_LABEL:
+    if HALT_ON_ERROR_LABEL not in labels:
       logging.debug(f"No {HALT_ON_ERROR_LABEL!r} label found on the PR")
     else:
       logging.debug(
@@ -116,6 +141,9 @@ def should_halt_for_connection(wait_regardless: bool = False) -> bool:
     return True
   else:
     logging.debug("No `halt-dispatch-input` detected")
+
+  if check_if_debug_logging_enabled_and_job_type_is_scheduled():
+    return True
 
   # NOTE: If other methods are added for checking whether a connection should be
   # waited for, they MUST go above this check, or this check must be changed to

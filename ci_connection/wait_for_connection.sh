@@ -19,11 +19,15 @@
 # available so that `wait_for_connection.py` and `notify_connection.py` can be
 # run without issues.
 
-set -euo pipefail
+if [[ -n "${MLCI_CONNECTION_DEBUG_LOGGING}" ]]; then
+  set -exuo pipefail
+else
+  set -euo pipefail
+fi
 
 source "$(dirname "$0")/utils.sh"
 
-echo "INFO: Determining Python executable..." >&2
+echo "INFO: Determining Python executable to run the connection wait..." >&2
 
 # See if there's an existing suitable Python
 if ! python_bin=$(suitable_python_exists); then

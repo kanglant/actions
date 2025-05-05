@@ -19,7 +19,6 @@
 # These utils are focused on making sure a suitable Python is available, and
 # used, for the ML CI connection backend and frontend.
 
-set -exuo pipefail
 
 UV_VERSION="0.6.17"
 UV_RELEASE_BASE_URL="https://github.com/astral-sh/uv/releases/download"
@@ -34,16 +33,24 @@ declare -A UV_CHECKSUMS=(
 )
 
 ensure_curl_is_installed() {
-  command -v curl &>/dev/null && return 0
+  echo "INFO: Checking if curl is installed..." >&2
+  command -v curl &>/dev/null && { echo "INFO: curl found." >&2; return 0; }
+
+  echo "INFO: curl not found, installing..." >&2
   local _cmd
-  if command -v apt-get &>/dev/null; then _cmd='apt-get update && apt-get install -y curl'
+  if command -v apt-get &>/dev/null; then
+    _cmd='apt-get update 1>/dev/null && apt-get install -y curl'
   elif command -v dnf &>/dev/null; then _cmd='dnf install -y curl'
   elif command -v yum &>/dev/null; then _cmd='yum install -y curl'
   elif command -v apk &>/dev/null; then _cmd='apk add curl'
   elif command -v pacman &>/dev/null; then _cmd='pacman -S --noconfirm curl'
-  elif command -v brew &>/dev/null; then _cmd='brew install curl' # No  needed
+  elif command -v brew &>/dev/null; then _cmd='brew install curl'
   else echo "ERR: No package manager found." >&2; return 1; fi
-  eval "$_cmd" # Execute the install command
+  _cmd="$_cmd 1>/dev/null"
+
+  echo "INFO: Running: $_cmd" >&2
+  eval "$_cmd"
+  echo "INFO: curl installation attempted." >&2
 }
 
 # Determines the Linux target triple.
@@ -55,14 +62,15 @@ ensure_curl_is_installed() {
 get_target_triple() {
   local arch libc
   arch=$(uname -m)
+  echo "DEBUG: Detected architecture: ${arch}" >&2
 
-  # --- Determine Libc ---
+  # Determine Libc
   libc="gnu" # Default to GNU/glibc
 
   # 1. Try ldd
   if command -v ldd >/dev/null && ldd --version 2>/dev/null | grep -qi 'musl'; then
       libc="musl"
-  # 2. Fallback to `file` command if ldd didn't find musl
+  # 2. Fall back to `file` command if ldd didn't find musl
   elif command -v file >/dev/null && [ -e /bin/sh ]; then
       # Check the interpreter mentioned by file for /bin/sh
       # Example output containing musl: "... interpreter /lib/ld-musl-x86_64.so.1, ..."
@@ -70,39 +78,35 @@ get_target_triple() {
           libc="musl"
       fi
   fi
+  echo "DEBUG: Detected libc: ${libc}" >&2
 
-  echo "${arch}-unknown-linux-${libc}"
+  local _target_triple="${arch}-unknown-linux-${libc}"
+  echo "DEBUG: Target triple: $_target_triple" >&2
+  echo "$_target_triple"
 }
 
 # Downloads and verifies the uv archive.
 # Globals: UV_VERSION, UV_RELEASE_BASE_URL, UV_CHECKSUMS
 # Arguments:
-#   $1 (Optional): Destination path. Defaults to ./uv-download.tar.gz
+#   $1: Destination path.
+#   $2: Target triple.
 download_and_verify_uv() {
-  local dest_file="${1:-./uv-download.tar.gz}" # Default destination if $1 is empty
-  local target_triple expected_checksum filename url tmp_file calculated_checksum
+  local dest_file="$1" target_triple="$2"
+  local expected_checksum filename url tmp_file calculated_checksum
 
-  # 1. Ensure curl
-  ensure_curl_is_installed || return 1
-
-  # 2. Get target triple
-  target_triple=$(get_target_triple)
-  if [[ $? -ne 0 || -z "$target_triple" ]]; then
-    echo "ERR: Failed to determine target triple." >&2
-    return 1
-  fi
-
-  # 3. Get expected checksum (and check validity)
+  # 1. Get expected checksum (and check validity)
   expected_checksum="${UV_CHECKSUMS[${target_triple}]}"
   if [[ -z "$expected_checksum" || "$expected_checksum" == *"_HERE"* ]]; then
     echo "ERR: Invalid/missing checksum for ${target_triple}." >&2
     return 1
   fi
+  echo "DEBUG: Expected checksum for ${target_triple}: ${expected_checksum}" >&2
 
-  # 4. Download to temp file
+  # 2. Download to temp file
   filename="uv-${target_triple}.tar.gz"
   url="${UV_RELEASE_BASE_URL}/${UV_VERSION}/${filename}"
   tmp_file=$(mktemp) || { echo "ERR: mktemp failed." >&2; return 1; }
+  echo "INFO: Downloading uv from ${url} to ${tmp_file}" >&2
 
   local attempt=1 max_attempts=3
   while ! curl --proto '=https' --tlsv1.2 -sSfL "${url}" -o "${tmp_file}"; do
@@ -114,31 +118,35 @@ download_and_verify_uv() {
     echo "WARN: Download attempt $((attempt-1)) failed. Retrying ${url} (attempt $attempt/$max_attempts)..." >&2
     sleep 1
   done
+  echo "INFO: Download successful." >&2
 
-  # 5. Verify checksum
+  # 3. Verify checksum
+  echo "INFO: Verifying checksum for ${tmp_file}" >&2
   calculated_checksum=$(sha256sum < "${tmp_file}" | awk '{print $1}')
   if [[ "$?" -ne 0 || "$calculated_checksum" != "$expected_checksum" ]]; then
       echo "ERR: Checksum mismatch for ${filename}." >&2
       echo "  Expected: $expected_checksum, Got: $calculated_checksum" >&2
       return 1
   fi
+  echo "INFO: Checksum verified." >&2
 
-  # 6. Move verified file to destination
+  # 4. Move verified file to destination
+  echo "INFO: Moving verified file to ${dest_file}" >&2
   mv "${tmp_file}" "${dest_file}"
 
-  # If default path was used, print it to stdout so caller knows where it is
-  [[ "$#" -eq 0 ]] && echo "${dest_file}"
   return 0
 }
 
 # Unpacks the uv archive and adds it to PATH
 # Arguments:
 #   $1: Path to the uv archive (.tar.gz).
+#   $2: Target triple.
 unpack_and_setup_uv() {
-  local archive_path="$1"
+  local archive_path="$1" target_triple="$2"
   # Define install location
   local uv_bin_dir="$HOME/.uv/bin"
   local env_script_path="$HOME/.uv/env"
+  echo "INFO: Unpacking uv from ${archive_path} and setting up PATH..." >&2
 
   # 1. Ensure directories exist
   mkdir -p "$uv_bin_dir"
@@ -146,8 +154,11 @@ unpack_and_setup_uv() {
   # 2. Unpack to temp dir and move binaries
   local unpack_dir
   unpack_dir=$(mktemp -d)
+  local _unpacked_bin_dir="${unpack_dir}/uv-${target_triple}"
+  echo "DEBUG: Unpacking ${archive_path} to ${unpack_dir}" >&2
   tar -xzf "$archive_path" -C "$unpack_dir"
-  mv "$unpack_dir/uv" "$unpack_dir/uvx" "$uv_bin_dir/"
+  echo "DEBUG: Moving uv binaries to ${uv_bin_dir}" >&2
+  mv "$_unpacked_bin_dir/uv" "$_unpacked_bin_dir/uvx" "$uv_bin_dir/"
   rm -rf "$unpack_dir"
 
 
@@ -184,6 +195,7 @@ ENV_SCRIPT
   fi
 
   # 6. Update PATH for current session (simple prepend)
+  echo "INFO: Adding ${uv_bin_dir} to PATH for current session." >&2
   export PATH="$uv_bin_dir:$PATH"
 
   echo "INFO: uv setup complete." >&2
@@ -199,9 +211,11 @@ ENV_SCRIPT
 # Returns 0 if suitable, 1 otherwise.
 suitable_python_exists() {
   local py_exe py_maj_min_output py_exit_status major minor setup_py_loc canon_py_path
+  echo "INFO: Checking for a suitable Python >= 3.10..." >&2
   # 1. Confirm an easily accessible Python exists
   py_exe=$(command -v python3 || command -v python)
-  [[ -z "$py_exe" ]] && return 1 # No python found
+  [[ -z "$py_exe" ]] && { echo "INFO: No python3 or python found in PATH." >&2; return 1; }
+  echo "DEBUG: Found Python executable: ${py_exe}" >&2
 
   # 2. Get the python version
   set +e # Disable exit on error just for this command
@@ -211,21 +225,25 @@ suitable_python_exists() {
 
   # 3. Check if the Python command executed successfully
   if [[ "$py_exit_status" -ne 0 ]]; then
+      echo "WARN: Failed to execute '${py_exe} -c ...' to get version." >&2
       return 1 # Python command failed
   fi
 
   # 4. Check if the command produced any output
   if [[ -z "$py_maj_min_output" ]]; then
+      echo "WARN: '${py_exe} -c ...' produced no version output." >&2
       return 1 # No version output received
   fi
+  echo "DEBUG: Python version reported: ${py_maj_min_output}" >&2
 
   # 4. Make sure the version is >= 3.10.
   major="${py_maj_min_output%%.*}"
   minor="${py_maj_min_output#*.}"
   if [[ "$major" -lt 3 ]] || { [[ "$major" -eq 3 ]] && [[ "$minor" -lt 10 ]]; }; then
-      echo "DEBUG: Python version ${major}.${minor} is < 3.10" >&2
+      echo "INFO: Python version ${major}.${minor} is < 3.10 (unsuitable)." >&2
       return 1 # Version < 3.10
   fi
+  echo "DEBUG: Python version ${major}.${minor} is >= 3.10." >&2
 
 
   # 5. Check if the Python is a setup-python one
@@ -240,31 +258,58 @@ suitable_python_exists() {
   # therefore acceptable.
   setup_py_loc="${pythonLocation:-}"
   if [[ -z "$setup_py_loc" ]]; then
+    echo "DEBUG: pythonLocation environment variable not set. Assuming not GHA setup-python." >&2
+    echo "INFO: Found suitable Python: ${py_exe}" >&2
     echo "$py_exe"
     return 0
   fi
+
   # Check if found python matches setup-python location
+  echo "DEBUG: pythonLocation environment variable set to: ${setup_py_loc}" >&2
   canon_py_path=$(readlink -f "$py_exe" 2>/dev/null)
-   # Is setup-python, unsuitable
-  [[ "$canon_py_path" == "${setup_py_loc}"/* || "$canon_py_path" == "$setup_py_loc" ]] && return 1
+  echo "DEBUG: Canonical path of found Python: ${canon_py_path}" >&2
+  if [[ "$canon_py_path" == "${setup_py_loc}"/* || "$canon_py_path" == "$setup_py_loc" ]]; then
+      echo "INFO: Found Python (${py_exe}) matches pythonLocation (${setup_py_loc}). Treating as unsuitable." >&2
+      return 1 # Is setup-python, unsuitable
+  fi
 
+  echo "INFO: Found suitable Python: ${py_exe}" >&2
   echo "$py_exe"
-
   return 0
 }
 
 ensure_suitable_python_is_available() {
+  if suitable_python_path=$(suitable_python_exists); then
+    echo "INFO: Suitable Python already exists at ${suitable_python_path}. No action needed." >&2
+    echo "${suitable_python_path}"
+    return 0
+  fi
+
+  echo "INFO: Suitable Python not found or unsuitable type detected." >&2
+
   # Make sure uv is available
   if ! command -v uv &>/dev/null; then
+    echo "INFO: uv command not found. Proceeding with uv installation." >&2
     local tmp_archive
-    tmp_archive=$(mktemp --suffix=.tar.gz uv-download-XXXXXX)
+    tmp_archive=$(mktemp --suffix=.tar.gz uv-download-XXXXXX) || { echo "ERR: mktemp failed for uv archive."; return 1; }
+    trap 'echo "INFO: Cleaning up ${tmp_archive}"; rm -f "${tmp_archive}"' EXIT
 
-    download_and_verify_uv "$tmp_archive"
-    unpack_and_setup_uv "$tmp_archive"
-    rm -f "$tmp_archive" || true
+    local target_triple
+    target_triple=$(get_target_triple)
+
+    ensure_curl_is_installed
+    download_and_verify_uv "$tmp_archive" "$target_triple"
+    unpack_and_setup_uv "$tmp_archive" "$target_triple"
+    trap - EXIT # Clear the trap after successful cleanup or if logic continues without needing it. Re-enable below if needed.
+    echo "INFO: uv installation and setup complete." >&2
+  else
+    echo "INFO: uv command found in PATH." >&2
   fi
 
   # Use `uv` to install Python
+  echo "INFO: Ensuring Python ${UV_PYTHON_TO_INSTALL} is installed via uv..." >&2
   uv python install "$UV_PYTHON_TO_INSTALL" # Idempotent
+  echo "INFO: Finding path for Python ${UV_PYTHON_TO_INSTALL} via uv..." >&2
   uv python find "$UV_PYTHON_TO_INSTALL" # Print out the path
+  echo "INFO: Python ${UV_PYTHON_TO_INSTALL} should now be available via uv." >&2
 }
