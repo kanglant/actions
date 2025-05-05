@@ -40,7 +40,4 @@ if [[ -z "$python_bin" ]]; then
 fi
 echo "INFO: Using Python installed/found by uv: $python_bin" >&2
 
-echo "INFO: Using Python: $python_bin"
-"$python_bin" --version
-
 "$python_bin" "$GITHUB_ACTION_PATH/wait_for_connection.py"

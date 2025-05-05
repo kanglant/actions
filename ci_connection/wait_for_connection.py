@@ -61,7 +61,7 @@ def check_if_debug_logging_enabled_and_job_type_is_scheduled() -> bool:
 
   result = actions_runner_debug_is_enabled and is_scheduled_job
   if result:
-    logging.info(f"Job is of the scheduled type, and debugging is enabled")
+    logging.info("Job is of the scheduled type, and debugging is enabled")
   else:
     if not is_scheduled_job:
       logging.debug("Job is not of the scheduled type")
@@ -228,7 +228,7 @@ def construct_connection_command() -> tuple[str, str]:
     f'{connect_command} --entrypoint="{python_bin} {actions_path}/notify_connection.py"'
   )
   fallback_connect_command = (
-    f"CONNECTION COMMAND (FALLBACK):\n" f'{connect_command} --entrypoint="bash -i"'
+    f'CONNECTION COMMAND (FALLBACK):\n{connect_command} --entrypoint="bash -i"'
   )
 
   return main_connect_command, fallback_connect_command
@@ -240,18 +240,20 @@ async def wait_for_connection(host: str = "127.0.0.1", port: int = 12455):
 
   logging.info("Googler connection only")
   logging.info("See go/ml-github-actions:connect for details\n")
-  logging.info("-" * 100)
-  logging.info(connect_command, extra={"bold": True, "underline": True})
-  logging.info(("-" * 100) + "\n")
+  logging.info()
+  _sep = "-" * 100
+  logging.info(
+    f"\n{_sep}\n{connect_command}\n{_sep}\n", extra={"bold": True, "underline": True}
+  )
 
-  logging.info(fallback_connect_command)
+  logging.info(f"{fallback_connect_command}\n")
   logging.info(
     "If the Python-based command doesn't work, use the Bash fallback above.\n"
-    "Using this fallback will NOT let the runner know a connection "
-    "was made, and will NOT cause the runner wait automatically.\n"
+    "Using this fallback will not let the runner know a connection "
+    "was made, and will not cause the runner to wait automatically.\n"
     "For the fallback, add a wait/sleep somewhere after the "
     "'Wait for Connection' in your workflow manually, or use a different "
-    "Python for this step."
+    "image/container/Python so the main command can run successfully.\n"
   )
 
   server = await asyncio.start_server(process_messages, host, port)

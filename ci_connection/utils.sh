@@ -19,6 +19,9 @@
 # These utils are focused on making sure a suitable Python is available, and
 # used, for the ML CI connection backend and frontend.
 
+MIN_PYTHON_MAJOR_VERSION=3
+MIN_PYTHON_MINOR_VERSION=10
+MIN_PYTHON_VERSION="${MIN_PYTHON_MAJOR_VERSION}.${MIN_PYTHON_MINOR_VERSION}"
 
 UV_VERSION="0.6.17"
 UV_RELEASE_BASE_URL="https://github.com/astral-sh/uv/releases/download"
@@ -50,7 +53,7 @@ ensure_curl_is_installed() {
 
   echo "INFO: Running: $_cmd" >&2
   eval "$_cmd"
-  echo "INFO: curl installation attempted." >&2
+  echo "INFO: curl installed." >&2
 }
 
 # Determines the Linux target triple.
@@ -211,7 +214,7 @@ ENV_SCRIPT
 # Returns 0 if suitable, 1 otherwise.
 suitable_python_exists() {
   local py_exe py_maj_min_output py_exit_status major minor setup_py_loc canon_py_path
-  echo "INFO: Checking for a suitable Python >= 3.10..." >&2
+  echo "INFO: Checking for a suitable Python >= ${MIN_PYTHON_VERSION}..." >&2
   # 1. Confirm an easily accessible Python exists
   py_exe=$(command -v python3 || command -v python)
   [[ -z "$py_exe" ]] && { echo "INFO: No python3 or python found in PATH." >&2; return 1; }
@@ -236,15 +239,13 @@ suitable_python_exists() {
   fi
   echo "DEBUG: Python version reported: ${py_maj_min_output}" >&2
 
-  # 4. Make sure the version is >= 3.10.
+  # 4. Make sure the version is acceptable.
   major="${py_maj_min_output%%.*}"
   minor="${py_maj_min_output#*.}"
-  if [[ "$major" -lt 3 ]] || { [[ "$major" -eq 3 ]] && [[ "$minor" -lt 10 ]]; }; then
-      echo "INFO: Python version ${major}.${minor} is < 3.10 (unsuitable)." >&2
-      return 1 # Version < 3.10
+  if [[ "$major" -lt "$MIN_PYTHON_MAJOR_VERSION" ]] || { [[ "$MIN_PYTHON_MAJOR_VERSION" -eq 3 ]] && [[ "$MIN_PYTHON_MINOR_VERSION" -lt 10 ]]; }; then
+      echo "INFO: Python version ${major}.${minor} is < $MIN_PYTHON_VERSION (unsuitable)." >&2
+      return 1 # Version too low
   fi
-  echo "DEBUG: Python version ${major}.${minor} is >= 3.10." >&2
-
 
   # 5. Check if the Python is a setup-python one
   # (variable pythonLocation is set), and if so, dismiss it.
@@ -258,7 +259,6 @@ suitable_python_exists() {
   # therefore acceptable.
   setup_py_loc="${pythonLocation:-}"
   if [[ -z "$setup_py_loc" ]]; then
-    echo "DEBUG: pythonLocation environment variable not set. Assuming not GHA setup-python." >&2
     echo "INFO: Found suitable Python: ${py_exe}" >&2
     echo "$py_exe"
     return 0
@@ -280,12 +280,11 @@ suitable_python_exists() {
 
 ensure_suitable_python_is_available() {
   if suitable_python_path=$(suitable_python_exists); then
-    echo "INFO: Suitable Python already exists at ${suitable_python_path}. No action needed." >&2
     echo "${suitable_python_path}"
     return 0
   fi
 
-  echo "INFO: Suitable Python not found or unsuitable type detected." >&2
+  echo "INFO: Suitable Python not found or unsuitable type detected. Using uv to install one." >&2
 
   # Make sure uv is available
   if ! command -v uv &>/dev/null; then
