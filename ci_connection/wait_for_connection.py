@@ -203,17 +203,47 @@ async def process_messages(reader, writer):
   writer.close()
 
 
+def construct_connection_command() -> tuple[str, str]:
+  runner_name = os.getenv("CONNECTION_POD_NAME")
+  cluster = os.getenv("CONNECTION_CLUSTER")
+  location = os.getenv("CONNECTION_LOCATION")
+  ns = os.getenv("CONNECTION_NS")
+
+  actions_path = os.path.dirname(__file__)
+
+  is_windows = platform.system() == "Windows"
+  if is_windows:
+    actions_path = actions_path.replace("\\", "\\\\")
+
+  connect_command = (
+    f"ml-actions-connect "
+    f"--runner={runner_name} "
+    f"--ns={ns} "
+    f"--loc={location} "
+    f"--cluster={cluster} "
+  )
+  python_bin = sys.executable
+  main_connect_command = (
+    f"CONNECTION COMMAND (MAIN):\n"
+    f'{connect_command} --entrypoint="{python_bin} {actions_path}/notify_connection.py"'
+  )
+  fallback_connect_command = (
+    f"CONNECTION COMMAND (FALLBACK):\n" f'{connect_command} --entrypoint="bash -i"'
+  )
+
+  return main_connect_command, fallback_connect_command
+
+
 async def wait_for_connection(host: str = "127.0.0.1", port: int = 12455):
   # Print out the data required to connect to this VM
   connect_command, fallback_connect_command = construct_connection_command()
 
   logging.info("Googler connection only")
-  logging.info("See go/ml-github-actions:connect for details")
+  logging.info("See go/ml-github-actions:connect for details\n")
   logging.info("-" * 100)
   logging.info(connect_command, extra={"bold": True, "underline": True})
-  logging.info("-" * 100)
+  logging.info(("-" * 100) + "\n")
 
-  logging.info("Fallback command (Bash-based):")
   logging.info(fallback_connect_command)
   logging.info(
     "If the Python-based command doesn't work, use the Bash fallback above.\n"
@@ -255,35 +285,6 @@ async def wait_for_connection(host: str = "127.0.0.1", port: int = 12455):
       logging.info(f"Time since last keep-alive: {elapsed_seconds}s")
 
     logging.info("Waiting process terminated.")
-
-
-def construct_connection_command() -> tuple[str, str]:
-  runner_name = os.getenv("CONNECTION_POD_NAME")
-  cluster = os.getenv("CONNECTION_CLUSTER")
-  location = os.getenv("CONNECTION_LOCATION")
-  ns = os.getenv("CONNECTION_NS")
-
-  actions_path = os.path.dirname(__file__)
-
-  is_windows = platform.system() == "Windows"
-  if is_windows:
-    actions_path = actions_path.replace("\\", "\\\\")
-
-  connect_command = (
-    f"CONNECTION COMMAND\n"
-    f"ml-actions-connect "
-    f"--runner={runner_name} "
-    f"--ns={ns} "
-    f"--loc={location} "
-    f"--cluster={cluster} "
-  )
-  python_bin = sys.executable
-  main_connect_command = (
-    f'{connect_command} --entrypoint="{python_bin} {actions_path}/notify_connection.py"'
-  )
-  fallback_connect_command = f'{connect_command} --entrypoint="bash -i"'
-
-  return main_connect_command, fallback_connect_command
 
 
 def main(wait_regardless: bool = False):
