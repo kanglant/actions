@@ -29,22 +29,16 @@ source "$(dirname "$0")/utils.sh"
 
 echo "INFO: Determining Python executable to run the connection wait..." >&2
 
-# See if there's an existing suitable Python
-if ! python_bin=$(suitable_python_exists); then
-    echo "INFO: No suitable system Python found. Ensuring Python via uv..." >&2
-    python_bin=$(ensure_suitable_python_is_available) || {
-      echo "ERR: Failed to find/install Python using uv." >&2
-      exit 1
-    }
-    # Sanity check: ensure the successful command actually produced output.
-    if [[ -z "$python_bin" ]]; then
-         echo "ERR: uv process succeeded but Python path was not output." >&2
-         exit 1
-    fi
-    echo "INFO: Using Python installed/found by uv: $python_bin" >&2
-else
-    echo "INFO: Found suitable system Python: $python_bin" >&2
+python_bin=$(ensure_suitable_python_is_available) || {
+  echo "ERR: Failed to find/install Python using uv." >&2
+  exit 1
+}
+# Sanity check: ensure the successful command actually produced output.
+if [[ -z "$python_bin" ]]; then
+     echo "ERR: uv process succeeded but Python path was not output." >&2
+     exit 1
 fi
+echo "INFO: Using Python installed/found by uv: $python_bin" >&2
 
 echo "INFO: Using Python: $python_bin"
 "$python_bin" --version
