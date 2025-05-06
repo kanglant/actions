@@ -240,7 +240,6 @@ async def wait_for_connection(host: str = "127.0.0.1", port: int = 12455):
 
   logging.info("Googler connection only")
   logging.info("See go/ml-github-actions:connect for details\n")
-  logging.info()
   _sep = "-" * 100
   logging.info(
     f"\n{_sep}\n{connect_command}\n{_sep}\n", extra={"bold": True, "underline": True}
