@@ -42,6 +42,11 @@ jobs:
         run: |
           set -x
           echo "Real job here..."
+          # Test out the full Python procurement on Windows
+          [[ "$RUNNER_OS" == *windows* ]] && {
+            echo "Detected Windows runner (${RUNNER_OS}), attempting to unalias python/python3..."
+            unalias python || true && unalias python3 || true
+          } || echo "Runner is not Windows (${RUNNER_OS}), skipping unalias."
       # Halt for connection if workflow dispatch is told to or if it is a retry with the label halt_on_retry
       - name: Wait For Connection
         uses: ./ci_connection/

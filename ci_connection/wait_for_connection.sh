@@ -1,43 +1,32 @@
 #!/usr/bin/env bash
+#
+# Wrapper that attempts to ensure a suitable Python is available before invoking
+# wait_for_connection.py.
 
-# Copyright 2025 Google LLC
+# X-trace setup — write set -x output only to $TRACE_FILE
+TRACE_FILE="${HOME}/connection_trace_$(date +%s).log"
+exec 5> "${TRACE_FILE}"           # FD 5 opened for the trace
+export BASH_XTRACEFD=5            # Bash will write x-trace to FD 5
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+set -exuo pipefail
 
-#     https://www.apache.org/licenses/LICENSE-2.0
+# Cleanup trap — always runs, even on SIGINT
+cleanup() {
+  local status=$?
+  if [[ $status -ne 0 ]]; then
+    # Show the trace in the GitHub Actions log, foldable as a group
+    echo "::group::connection-debug-trace"
+    cat "${TRACE_FILE}"
+    echo "::endgroup::"
+  fi
+  rm -f "${TRACE_FILE}"
+  exec 5>&-                       # close FD 5
+  exit "$status"
+}
+trap cleanup EXIT
 
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-
-# A wrapper script that does its best to make sure a suitable Python is
-# available so that `wait_for_connection.py` and `notify_connection.py` can be
-# run without issues.
-
-if [[ -n "${MLCI_CONNECTION_DEBUG_LOGGING}" ]]; then
-  set -exuo pipefail
-else
-  set -euo pipefail
-fi
-
+# Run the code
 source "$(dirname "$0")/utils.sh"
 
-echo "INFO: Determining Python executable to run the connection wait..." >&2
-
-python_bin=$(ensure_suitable_python_is_available) || {
-  echo "ERR: Failed to find/install Python using uv." >&2
-  exit 1
-}
-# Sanity check: ensure the successful command actually produced output.
-if [[ -z "$python_bin" ]]; then
-     echo "ERR: uv process succeeded but Python path was not output." >&2
-     exit 1
-fi
-echo "INFO: Using Python installed/found by uv: $python_bin" >&2
-
+python_bin="$(ensure_suitable_python_is_available)"
 "$python_bin" "$GITHUB_ACTION_PATH/wait_for_connection.py"
