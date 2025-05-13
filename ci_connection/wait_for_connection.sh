@@ -36,20 +36,6 @@ cleanup() {
     echo "::group::connection-debug-trace"
     cat "${TRACE_FILE}"
     echo "::endgroup::"
-
-    # Construct and print the fallback connection command
-    local runner_name="${CONNECTION_POD_NAME:-}"
-    local cluster="${CONNECTION_CLUSTER:-}"
-    local location="${CONNECTION_LOCATION:-}"
-    local ns="${CONNECTION_NS:-}"
-
-    echo # Add a newline for better separation
-    echo "CONNECTION COMMAND (FALLBACK):"
-    printf "ml-actions-connect --runner=\"%s\" --ns=\"%s\" --loc=\"%s\" --cluster=\"%s\" --entrypoint=\"bash -i\"\n" \
-      "$runner_name" \
-      "$ns" \
-      "$location" \
-      "$cluster"
   fi
   rm -f "${TRACE_FILE}"
   exec 19>&-                       # close FD 19 (corrected from 5)
