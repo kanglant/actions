@@ -283,3 +283,23 @@ ensure_suitable_python_is_available() {
   fi
   python_bin_path="$found_python_path"
 }
+
+# This is exclusively for testing whether Python procurement works as expected
+# Creates a temporary directory with mock python executables and prepends it to PATH.
+# The temp directory and the PATH changes are not undone afterwards.
+hide_existing_pythons() {
+  local temp_dir
+  temp_dir=$(mktemp -d "python_hider_temp_XXXXXX")
+
+  unalias python >/dev/null 2>&1 || true
+  unalias python3 >/dev/null 2>&1 || true
+
+  # Create mock 'python' and 'python3' that exit with "command not found" status
+  printf '#!/bin/sh\nexit 127' > "$temp_dir/python" && chmod +x "$temp_dir/python"
+  printf '#!/bin/sh\nexit 127' > "$temp_dir/python3" && chmod +x "$temp_dir/python3"
+
+  # Prepend the temporary directory to PATH for the current script's execution
+  export PATH="$temp_dir:$PATH"
+
+  echo "INFO: Python-less environment simulated. Mock executables in $temp_dir. PATH modified." >&2
+}

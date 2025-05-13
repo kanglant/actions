@@ -57,6 +57,13 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# This step is for testing purposes only.
+# This will attempt to "hide" Pythons available via python/python3, so the
+# Python procurement script can run in full.
+if [[ -n "$MLCI_HIDE_PYTHON" ]]; then
+  hide_existing_pythons
+fi
+
 python_bin=""
 ensure_suitable_python_is_available python_bin
 "$python_bin" -V
