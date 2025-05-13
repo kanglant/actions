@@ -42,8 +42,10 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
       - name: Echo
         run: |
-          # Test out the full Python procurement
+
           set -e
+
+          # Test out the full Python procurement
 
           # Attempt to unalias
           unalias python >/dev/null 2>&1 || true
