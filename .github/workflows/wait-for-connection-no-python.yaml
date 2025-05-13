@@ -32,19 +32,43 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: ["linux-x86-n2-16"]
+        runner: ["linux-x86-n2-16", "windows-x86-n2-16"]
         instances: ["1"]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     container:
-      # image: us-central1-docker.pkg.dev/tensorflow-sigs/tensorflow/ml-build@sha256:cec01011e627c0fd101c521a8af7c09ce4557ab6dcc9f8678aeb67a3182ed821 # ratchet:tensorflow/ml-build:latest
-      image: index.docker.io/library/ubuntu@sha256:6d8d9799fe6ab3221965efac00b4c34a2bcc102c086a58dff9e19a08b913c7ef # ratchet:ubuntu:20.04
+      image: ${{ startsWith(matrix.runner, 'linux') && 'us-central1-docker.pkg.dev/tensorflow-sigs/tensorflow/ml-build@sha256:cec01011e627c0fd101c521a8af7c09ce4557ab6dcc9f8678aeb67a3182ed821' || (startsWith(matrix.runner, 'windows') && null) }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # ratchet:actions/checkout@v4
       - name: Echo
         run: |
-          set -x
-          echo "Real job here..."
+          # Test out the full Python procurement
+          set -e
+
+          # Attempt to unalias
+          unalias python >/dev/null 2>&1 || true
+          unalias python3 >/dev/null 2>&1 || true
+
+          # Store original PATH and create a temporary directory
+          _original_path="$PATH"
+          _temp_dir=$(mktemp -d python_hider_XXXXXX)
+
+          # Cleanup - define a function and trap it to run on exit/interrupt
+          # This ensures PATH is restored and temp dir is removed.
+          _cleanup() {
+            export PATH="$_original_path"
+            rm -rf "$_temp_dir"
+          }
+          trap _cleanup EXIT SIGINT SIGTERM
+
+          # Create mock 'python' and 'python3' executables in the temp directory
+          # These mocks will be found first due to PATH modification and simulate "command not found".
+          printf '#!/bin/sh\nexit 127' > "$_temp_dir/python" && chmod +x "$_temp_dir/python"
+          printf '#!/bin/sh\nexit 127' > "$_temp_dir/python3" && chmod +x "$_temp_dir/python3"
+
+          # Prepend the temporary directory to PATH
+          export PATH="$_temp_dir:$_original_path"
+
       # Halt for connection if workflow dispatch is told to or if it is a retry with the label halt_on_retry
       - name: Wait For Connection
         uses: ./ci_connection/

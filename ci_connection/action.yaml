@@ -21,7 +21,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-  # First try to set up waiting with Python, as it has some QoL features, like mirroring the `env` state, etc.
   - name: Wait for connection (conditionally)
     id: primary
     shell: bash

@@ -8,7 +8,7 @@ source "$(dirname "$0")/utils.sh"
 
 # X-trace setup — write set -x output only to $TRACE_FILE
 TRACE_FILE="$(_normalize_path "${HOME}/connection_trace_$(date +%s).log")"
-exec 5> "${TRACE_FILE}"           # FD 5 opened for the trace
+exec 19> "${TRACE_FILE}"           # FD 5 opened for the trace
 export BASH_XTRACEFD=19            # Bash will write x-trace to FD 19
 
 set -exuo pipefail
