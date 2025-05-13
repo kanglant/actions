@@ -23,7 +23,7 @@ source "$(dirname "$0")/utils.sh"
 
 # X-trace setup — write set -x output only to $TRACE_FILE
 TRACE_FILE="$(_normalize_path "${HOME}/connection_trace_$(date +%s).log")"
-exec 19> "${TRACE_FILE}"           # FD 5 opened for the trace
+exec 19> "${TRACE_FILE}"           # FD 19 opened for the trace
 export BASH_XTRACEFD=19            # Bash will write x-trace to FD 19
 
 set -exuo pipefail
@@ -36,15 +36,26 @@ cleanup() {
     echo "::group::connection-debug-trace"
     cat "${TRACE_FILE}"
     echo "::endgroup::"
+
+    # Construct and print the fallback connection command
+    local runner_name="${CONNECTION_POD_NAME:-}"
+    local cluster="${CONNECTION_CLUSTER:-}"
+    local location="${CONNECTION_LOCATION:-}"
+    local ns="${CONNECTION_NS:-}"
+
+    echo # Add a newline for better separation
+    echo "CONNECTION COMMAND (FALLBACK):"
+    printf "ml-actions-connect --runner=\"%s\" --ns=\"%s\" --loc=\"%s\" --cluster=\"%s\" --entrypoint=\"bash -i\"\n" \
+      "$runner_name" \
+      "$ns" \
+      "$location" \
+      "$cluster"
   fi
   rm -f "${TRACE_FILE}"
-  exec 5>&-                       # close FD 5
+  exec 19>&-                       # close FD 19 (corrected from 5)
   exit "$status"
 }
 trap cleanup EXIT
-
-# Run the code
-source "$(dirname "$0")/utils.sh"
 
 python_bin=""
 ensure_suitable_python_is_available python_bin
