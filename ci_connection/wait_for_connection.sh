@@ -16,8 +16,8 @@
 
 
 # Wrapper that attempts to ensure a suitable Python is available before invoking
-# wait_for_connection.py. When debugging is enabled,
-# Bash x-trace is logged to a file for easier inspection.
+# wait_for_connection.py.
+# When debugging is enabled, Bash x-trace is logged to a file for easier inspection.
 
 source "$(dirname "$0")/utils.sh"
 
@@ -36,9 +36,12 @@ cleanup() {
     echo "::group::connection-debug-trace"
     cat "${TRACE_FILE}"
     echo "::endgroup::"
+
+    print_basic_connection_command_if_requested
   fi
+
   rm -f "${TRACE_FILE}"
-  exec 19>&-                       # close FD 19 (corrected from 5)
+  exec 19>&-                       # close FD 19
   exit "$status"
 }
 trap cleanup EXIT

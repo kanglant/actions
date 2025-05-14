@@ -16,13 +16,12 @@ description: 'Action to wait for connection from user (conditionally)'
 inputs:
   halt-dispatch-input:
     description: 'Should the action wait for user connection from workflow_dispatch?'
-    required: false
     default: "no"
+permissions: {}
 runs:
   using: "composite"
   steps:
   - name: Wait for connection (conditionally)
-    id: primary
     shell: bash
     env:
       PYTHONUNBUFFERED: 1

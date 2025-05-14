@@ -49,7 +49,9 @@ _normalize_path() {
   fi
   local normalized_path
 
-  # This handles cases like HOME=/ leading to //somepath or HOME=/some/dir/ leading to /some/dir//.another
+  # This handles cases like `HOME=/` leading to `//somepath`
+  # While harmless on Linux, double forward slashes break conversion of
+  # POSIX paths to Windows ones via `cygpath`.
   normalized_path=$(printf '%s' "$input_path" | sed 's#/\+#/#g')
 
   if (( _IS_WINDOWS )) && [[ "$output_type" == "windows" ]]; then
@@ -302,4 +304,37 @@ hide_existing_pythons() {
   export PATH="$temp_dir:$PATH"
 
   echo "INFO: Python-less environment simulated. Mock executables in $temp_dir. PATH modified." >&2
+}
+
+# If the Python-based connection/connection check fails, do a much more basic
+# check for whether the job should wait for a connection.
+# This is just a quick fallback, the intended way is to have Python handle all the
+# necessary checks.
+print_basic_connection_command_if_requested() {
+  if [[ -z "$ACTIONS_RUNNER_DEBUG" && -z "$HALT_DISPATCH_INPUT" ]]; then
+    return
+  fi
+
+  local runner_name_val="${CONNECTION_POD_NAME}"
+  local cluster_val="${CONNECTION_CLUSTER}"
+  local location_val="${CONNECTION_LOCATION}"
+  local ns_val="${CONNECTION_NS}"
+
+  local connect_command_core="ml-actions-connect --runner=${runner_name_val} --ns=${ns_val} --loc=${location_val} --cluster=${cluster_val}"
+
+  local fallback_command="${connect_command_core} --entrypoint=\"bash -i\""
+  local bold_green='\033[1;32m' # bold and green
+  local reset_color='\033[0m'   # reset the modifications
+
+  echo
+  echo "Python-based connection failed. The Bash fallback command is printed below."
+  echo "Using this fallback will not let the runner know a connection "
+  echo "was made, and will not cause the runner to wait automatically."
+  echo "For the fallback, add a wait/sleep somewhere after the "
+  echo "'Wait for Connection' in the workflow manually, or use a different "
+  echo "image/container/Python so the primary connection logic can run successfully."
+  echo
+
+  echo -e "${bold_green}CONNECTION COMMAND (FALLBACK):${reset_color}"
+  echo -e "${bold_green}${fallback_command}${reset_color}"
 }

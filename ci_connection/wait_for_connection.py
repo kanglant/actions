@@ -52,23 +52,25 @@ def check_if_debug_logging_enabled_and_job_type_is_scheduled() -> bool:
   """
   Checks if GitHub Actions debug logging is enabled AND the workflow
   was triggered by a 'schedule' event.
+
+  This is useful, or even necessary, as it currently appears to be the sole way
+  of marking a continuous/nightly job to wait for connection.
   """
-  actions_runners_debug_value = os.getenv("ACTIONS_RUNNER_DEBUG")
-  actions_runner_debug_is_enabled = actions_runners_debug_value == "1"
+  actions_runner_debug_enabled = _is_true_like_env_var("ACTIONS_RUNNER_DEBUG")
 
   event_name = os.getenv("GITHUB_EVENT_NAME")
   is_scheduled_job = event_name == "schedule"
 
-  result = actions_runner_debug_is_enabled and is_scheduled_job
+  result = actions_runner_debug_enabled and is_scheduled_job
   if result:
-    logging.info("Job is of the scheduled type, and debugging is enabled")
+    logging.info("Job is of the 'schedule' type, and runner debugging is enabled")
   else:
     if not is_scheduled_job:
-      logging.debug("Job is not of the scheduled type")
-    if not actions_runner_debug_is_enabled:
+      logging.debug(f"Job type is {event_name}, not 'schedule'")
+    if not actions_runner_debug_enabled:
       logging.debug(
         f"Job does not have logging enabled: "
-        f"ACTIONS_RUNNER_DEBUG={actions_runner_debug_is_enabled}"
+        f"ACTIONS_RUNNER_DEBUG={actions_runner_debug_enabled}"
       )
   return result
 
@@ -220,7 +222,7 @@ def construct_connection_command() -> tuple[str, str]:
     f"--runner={runner_name} "
     f"--ns={ns} "
     f"--loc={location} "
-    f"--cluster={cluster} "
+    f"--cluster={cluster}"
   )
   python_bin = sys.executable
   main_connect_command = (
