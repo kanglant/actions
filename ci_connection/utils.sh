@@ -73,19 +73,45 @@ detect_pm() {
 }
 
 ensure_packages_installed() {
-  local missing=() pm cmd
+  local missing=() pm cmd install_flag_val install_flag_lower
+  local pkg
+
   for pkg in "$@"; do
     command -v "$pkg" &>/dev/null || missing+=("$pkg")
   done
+
   [[ ${#missing[@]} -eq 0 ]] && return 0
-  pm=$(detect_pm) || true
-  if [[ -z "$pm" ]]; then
-    echo "ERR: No package manager found to install: ${missing[*]}" >&2
+
+  install_flag_val="${MLCI_INSTALL_MISSING_PACKAGES:-}"
+  install_flag_lower="${install_flag_val,,}" # lowercase
+
+  if [[ -z "$install_flag_val" || \
+        "$install_flag_val" == "0" || \
+        "$install_flag_lower" == "false" ]]; then
+    printf "ERR: Missing required packages: '%s'. Automatic installation is disabled.\n" "${missing[*]}" >&2
+    echo "To resolve this:" >&2
+    echo "1. Enable automatic installation: Set the 'MLCI_INSTALL_MISSING_PACKAGES' environment variable." >&2
+    echo "2. Ensure a suitable Python (3.10+, not installed via setup-python) is present under python/python3 on the VM/Docker container, prior to the waiting for connection step." >&2
     return 1
   fi
+
+  pm=$(detect_pm)
+  if [[ -z "$pm" ]]; then
+    printf "ERR: No package manager found. Cannot install missing packages: '%s'\n" "${missing[*]}" >&2
+    return 1
+  fi
+
   cmd="$pm ${missing[*]}"
-  echo "INFO: Installing missing packages: ${missing[*]}" >&2
-  eval "$cmd 1>/dev/null"
+  printf "INFO: Attempting to install missing packages: '%s'\n" "${missing[*]}" >&2
+
+  if ! eval "$cmd 1>/dev/null"; then
+    printf "ERR: Failed to install one or more packages: '%s'.\n" "${missing[*]}" >&2
+    echo "ERR: Command executed: $cmd" >&2
+    return 1
+  fi
+
+  echo "INFO: Packages installed successfully." >&2
+  return 0
 }
 
 # Determines the Linux or Windows target triple for uv.
@@ -165,7 +191,6 @@ unpack_and_setup_uv() {
 
   local extracted_uv_content_dir="${unpack_dir}"
   if (( _IS_WINDOWS )); then
-    ensure_packages_installed unzip
     unzip -q "$archive_path" -d "$unpack_dir"
   else
     tar -xzf "$archive_path" -C "$unpack_dir"
@@ -253,7 +278,13 @@ ensure_suitable_python_is_available() {
   fi
 
   echo "INFO: Suitable Python not found, installing via uv." >&2
-  ensure_packages_installed curl || return  1
+
+  local pkgs_to_ensure=("curl")
+  if (( _IS_WINDOWS )); then
+    pkgs_to_ensure+=("unzip")
+  fi
+  ensure_packages_installed "${pkgs_to_ensure[@]}" || return 1
+
   if ! command -v uv &>/dev/null; then
     local archive_extension=".tar.gz"
     (( _IS_WINDOWS )) && archive_extension=".zip"
@@ -283,6 +314,8 @@ ensure_suitable_python_is_available() {
     echo "ERR: uv installed Python ${UV_PYTHON_TO_INSTALL} but could not find it afterwards." >&2
     return 1
   fi
+  # This is is a nameref, the shellcheck is wrong
+  # shellcheck disable=SC2034
   python_bin_path="$found_python_path"
 }
 
@@ -311,7 +344,7 @@ hide_existing_pythons() {
 # This is just a quick fallback, the intended way is to have Python handle all the
 # necessary checks.
 print_basic_connection_command_if_requested() {
-  if [[ -z "$ACTIONS_RUNNER_DEBUG" && -z "$HALT_DISPATCH_INPUT" ]]; then
+  if [[ -z "${ACTIONS_RUNNER_DEBUG:-}" && -z "${HALT_DISPATCH_INPUT:-}" ]]; then
     return
   fi
 
@@ -326,15 +359,15 @@ print_basic_connection_command_if_requested() {
   local bold_green='\033[1;32m' # bold and green
   local reset_color='\033[0m'   # reset the modifications
 
-  echo
-  echo "Python-based connection failed. The Bash fallback command is printed below."
-  echo "Using this fallback will not let the runner know a connection "
-  echo "was made, and will not cause the runner to wait automatically."
-  echo "For the fallback, add a wait/sleep somewhere after the "
-  echo "'Wait for Connection' in the workflow manually, or use a different "
-  echo "image/container/Python so the primary connection logic can run successfully."
-  echo
+  echo >&2
+  echo "Python-based connection failed. The Bash fallback command is printed below." >&2
+  echo "Using this fallback will not let the runner know a connection " >&2
+  echo "was made, and will not cause the runner to wait automatically." >&2
+  echo "For the fallback, add a wait/sleep somewhere after the " >&2
+  echo "'Wait for Connection' in the workflow manually, or use a different " >&2
+  echo "image/container/Python so the primary connection logic can run successfully." >&2
+  echo >&2
 
-  echo -e "${bold_green}CONNECTION COMMAND (FALLBACK):${reset_color}"
-  echo -e "${bold_green}${fallback_command}${reset_color}"
+  echo -e "${bold_green}CONNECTION COMMAND (FALLBACK):${reset_color}" >&2
+  echo -e "${bold_green}${fallback_command}${reset_color}" >&2
 }

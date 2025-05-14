@@ -48,6 +48,11 @@ jobs:
       - name: Wait For Connection
         uses: ./ci_connection/
         env:
+          # Hide any Python present under python/python3 for full execution of the
+          # Python finding part of wait_for_connection.sh
           MLCI_HIDE_PYTHON: 1
+          # Allow installing the packages necessary to install `uv`
+          # via the default package manager e.g., curl, unzip
+          MLCI_INSTALL_MISSING_PACKAGES: 1
         with:
           halt-dispatch-input: ${{ inputs.halt-for-connection }}
