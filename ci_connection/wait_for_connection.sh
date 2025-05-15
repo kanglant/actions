@@ -17,7 +17,7 @@
 
 # Wrapper that attempts to ensure a suitable Python is available before invoking
 # wait_for_connection.py.
-# When debugging is enabled, Bash x-trace is logged to a file for easier inspection.
+# Bash x-trace is logged to a file, which is shown on error, for easier inspection.
 
 source "$(dirname "$0")/utils.sh"
 
