@@ -83,8 +83,7 @@ def is_debug_logging_enabled_and_job_type_is_schedule_or_workflow_dispatch() -> 
       logging.debug(f"Job type is {event_name}, not 'schedule' or 'workflow_dispatch'")
     if not actions_debug_enabled:
       logging.debug(
-        f"Job does not have logging enabled: "
-        f"ACTIONS_RUNNER_DEBUG={actions_debug_enabled}"
+        f"Job does not have logging enabled: RUNNER_DEBUG={actions_debug_enabled}"
       )
   return result
 
