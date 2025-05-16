@@ -68,24 +68,26 @@ def is_debug_logging_enabled_and_job_type_is_schedule_or_workflow_dispatch() -> 
   This is useful, or even necessary, as it currently appears to be the sole way
   of marking a continuous job, or a re-run of a nightly job to wait for connection.
   """
-  actions_runner_debug_enabled = _is_true_like_env_var("ACTIONS_RUNNER_DEBUG")
+  _actions_runner_debug_enabled = _is_true_like_env_var("ACTIONS_RUNNER_DEBUG")
+  _actions_step_debug_enabled = _is_true_like_env_var("ACTIONS_STEP_DEBUG")
+
+  actions_debug_enabled = _actions_runner_debug_enabled or _actions_step_debug_enabled
 
   event_name = os.getenv("GITHUB_EVENT_NAME")
   is_schedule_or_workflow_dispatch = event_name in {"schedule", "workflow_dispatch"}
 
-  result = actions_runner_debug_enabled and is_schedule_or_workflow_dispatch
+  result = actions_debug_enabled and is_schedule_or_workflow_dispatch
   if result:
     logging.info(
-      "Job is of the 'schedule/workflow_dispatch' type, and runner "
-      "debugging is enabled"
+      "Job is of the 'schedule/workflow_dispatch' type, and runner debugging is enabled"
     )
   else:
     if not is_schedule_or_workflow_dispatch:
       logging.debug(f"Job type is {event_name}, not 'schedule' or 'workflow_dispatch'")
-    if not actions_runner_debug_enabled:
+    if not actions_debug_enabled:
       logging.debug(
         f"Job does not have logging enabled: "
-        f"ACTIONS_RUNNER_DEBUG={actions_runner_debug_enabled}"
+        f"ACTIONS_RUNNER_DEBUG={actions_debug_enabled}"
       )
   return result
 
@@ -140,12 +142,18 @@ def check_if_labels_require_connection_halting() -> Optional[bool]:
   return False
 
 
-def should_halt_for_connection(wait_regardless: bool = False) -> bool:
+def should_halt_for_connection(
+  wait_regardless: bool = False, wait_after_conditions_check: bool = False
+) -> bool:
   """Check if the workflow should wait, due to inputs, vars, and labels."""
 
   logging.info("Checking if the workflow should be halted for a connection...")
 
-  if wait_regardless:
+  if not wait_after_conditions_check:
+    # Useful for debugging why halting conditions were/were not triggered
+    wait_after_conditions_check = _is_true_like_env_var("MLCI_WAIT_AFTER_HALT_CHECK")
+
+  if not wait_after_conditions_check and wait_regardless:
     logging.info("Wait for connection requested explicitly via code")
     return True
 
@@ -168,11 +176,16 @@ def should_halt_for_connection(wait_regardless: bool = False) -> bool:
   if labels_require_halting:
     return True
   if labels_require_halting is None:
-    logging.critical(
-      "Exiting due to inability to retrieve PR labels, and no "
-      "other halting conditions being met"
-    )
-    sys.exit(1)
+    if not wait_after_conditions_check:
+      logging.critical(
+        "Exiting due to inability to retrieve PR labels, and no "
+        "other halting conditions being met"
+      )
+      sys.exit(1)
+
+  if wait_after_conditions_check:
+    logging.info("Wait for connection requested explicitly via code, or ")
+    return True
 
   return False
 
@@ -304,9 +317,12 @@ async def wait_for_connection(host: str = "127.0.0.1", port: int = 12455):
     logging.info("Waiting process terminated.")
 
 
-def main(wait_regardless: bool = False):
+def main(wait_regardless: bool = False, wait_after_conditions_check: bool = False):
   try:
-    if should_halt_for_connection(wait_regardless=wait_regardless):
+    if should_halt_for_connection(
+      wait_regardless=wait_regardless,
+      wait_after_conditions_check=wait_after_conditions_check,
+    ):
       asyncio.run(wait_for_connection())
     else:
       logging.info("No conditions for halting the workflow for connection were met")
