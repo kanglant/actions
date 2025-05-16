@@ -49,8 +49,7 @@ STATE_ENV_OUT_PATH = os.path.join(STATE_OUT_DIR, STATE_ENV_FILENAME)
 _SHOW_DEBUG = bool(
   os.getenv(
     "WAIT_FOR_CONNECTION_DEBUG",
-    os.getenv("ACTIONS_RUNNER_DEBUG",
-              os.getenv("ACTIONS_STEP_DEBUG"))
+    os.getenv("RUNNER_DEBUG"),
   )
 )
 

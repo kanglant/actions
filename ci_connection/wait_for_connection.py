@@ -68,10 +68,7 @@ def is_debug_logging_enabled_and_job_type_is_schedule_or_workflow_dispatch() -> 
   This is useful, or even necessary, as it currently appears to be the sole way
   of marking a continuous job, or a re-run of a nightly job to wait for connection.
   """
-  _actions_runner_debug_enabled = _is_true_like_env_var("ACTIONS_RUNNER_DEBUG")
-  _actions_step_debug_enabled = _is_true_like_env_var("ACTIONS_STEP_DEBUG")
-
-  actions_debug_enabled = _actions_runner_debug_enabled or _actions_step_debug_enabled
+  actions_debug_enabled = _is_true_like_env_var("RUNNER_DEBUG")
 
   event_name = os.getenv("GITHUB_EVENT_NAME")
   is_schedule_or_workflow_dispatch = event_name in {"schedule", "workflow_dispatch"}
@@ -149,9 +146,10 @@ def should_halt_for_connection(
 
   logging.info("Checking if the workflow should be halted for a connection...")
 
+  _wait_after_halt_check_var_name = "MLCI_WAIT_AFTER_HALT_CHECK"
   if not wait_after_conditions_check:
     # Useful for debugging why halting conditions were/were not triggered
-    wait_after_conditions_check = _is_true_like_env_var("MLCI_WAIT_AFTER_HALT_CHECK")
+    wait_after_conditions_check = _is_true_like_env_var(_wait_after_halt_check_var_name)
 
   if not wait_after_conditions_check and wait_regardless:
     logging.info("Wait for connection requested explicitly via code")
@@ -184,7 +182,10 @@ def should_halt_for_connection(
       sys.exit(1)
 
   if wait_after_conditions_check:
-    logging.info("Wait for connection requested explicitly via code, or ")
+    logging.info(
+      "Wait for connection requested explicitly via code, "
+      f"or {_wait_after_halt_check_var_name}"
+    )
     return True
 
   return False
