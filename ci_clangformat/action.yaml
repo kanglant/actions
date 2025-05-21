@@ -86,13 +86,6 @@ runs:
         # pipx installs and runs clang-format with a specific version.
         pipx run clang-format==${{ inputs.clang_format_version }} --dry-run --Werror --verbose $(git diff --name-only origin/main HEAD -- '*.cc' '*.h')
       else
+        echo "::notice::Repository does not have a .clang-format file. Using the action's default."
         pipx run clang-format==${{ inputs.clang_format_version }} -style=file:$ACTION_DEFAULT_CLANG_FORMAT --dry-run --Werror --verbose $(git diff --name-only origin/main HEAD -- '*.cc' '*.h')
       fi
-
-      # CLANG_FORMAT_EXE="${{ steps.install-clang-format.outputs.clang_format_exe }}"
-      # PATHS_TO_CHECK="${{ inputs.paths_to_check }}"
-      # EXCLUDE_REGEX="${{ inputs.exclude_regex }}"
-      # echo "Running $CLANG_FORMAT_EXE check on paths: $PATHS_TO_CHECK"
-      # if [ -n "$EXCLUDE_REGEX" ]; then
-      #   echo "Excluding regex: $EXCLUDE_REGEX"
-      # fi
