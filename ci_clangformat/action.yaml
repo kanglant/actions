@@ -30,7 +30,10 @@ runs:
     uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
   - name: "Fetch HEAD of ${{ inputs.branch_name }} branch"
     shell: bash
-    run: git fetch origin ${{ inputs.branch_name }} --depth=1
+    run: |
+      # Silence safe.directory warnings when a job is running within a container 
+      /usr/bin/git config --global --add safe.directory '*'
+      /usr/bin/git fetch origin ${{ inputs.branch_name }} --depth=1
   - name: Run clang-format check
     id: check-format
     shell: bash
@@ -40,9 +43,9 @@ runs:
 
       if [ -f "$REPO_CLANG_FORMAT" ]; then
         echo "::notice::Using repository's .clang-format file."
-        # pipx installs and runs clang-format with a specific version.
-        pipx run clang-format==${{ inputs.clang_format_version }} --dry-run --Werror --verbose $(git diff --name-only origin/main HEAD -- '*.cc' '*.h')
+        # uvx (an alias for `uv tool run`) installs and runs clang-format with a specific version.
+        uvx clang-format==${{ inputs.clang_format_version }} --dry-run --Werror --verbose $(git diff --name-only origin/main HEAD -- '*.cc' '*.h')
       else
         echo "::notice::Repository does not have a .clang-format file. Using the action's default."
-        pipx run clang-format==${{ inputs.clang_format_version }} -style=file:$ACTION_DEFAULT_CLANG_FORMAT --dry-run --Werror --verbose $(git diff --name-only origin/main HEAD -- '*.cc' '*.h')
+        uvx clang-format==${{ inputs.clang_format_version }} -style=file:$ACTION_DEFAULT_CLANG_FORMAT --dry-run --Werror --verbose $(git diff --name-only origin/main HEAD -- '*.cc' '*.h')
       fi
