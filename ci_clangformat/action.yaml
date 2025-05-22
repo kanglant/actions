@@ -15,18 +15,13 @@ name: "Check clang-format"
 description: 'Action to run clang-format on changed files'
 inputs:
   clang_format_version:
-    description: 'The clang-format version to use (e.g., "17", "18").'
+    description: 'The clang-format version to use.'
     required: true
-    default: "17.0.6"
+    default: "20.1.5"
   branch_name:
-    description: 'The name of the branch (e.g., "main") used for fetching comparisons.'
+    description: 'The repository branch used for fetching comparisons.'
     required: true
     default: 'main'
-
-# outputs:
-#   changes_detected:
-#     description: 'True if clang-format detected formatting changes.'
-#     value: ${{ steps.check-format.outputs.changes_detected }}
 
 runs:
   using: "composite"
@@ -36,44 +31,6 @@ runs:
   - name: "Fetch HEAD of ${{ inputs.branch_name }} branch"
     shell: bash
     run: git fetch origin ${{ inputs.branch_name }} --depth=1
-  # - name: "Determine and install clang-format"
-  #   shell: bash
-  #   id: install-clang-format
-  #   run: |
-  #     CLANG_VERSION="${{ inputs.clang_format_version }}"
-  #     CLANG_FORMAT_NAME=""
-
-  #     if [ "$CLANG_VERSION" == "latest" ]; then
-  #       CLANG_FORMAT_NAME="clang-format"
-  #     else
-  #       CLANG_FORMAT_NAME="clang-format-${CLANG_VERSION}"
-  #     fi
-      
-  #     if command -v "$CLANG_FORMAT_NAME" &> /dev/null; then
-  #       echo "::notice::'$CLANG_FORMAT_NAME' is already installed."
-  #     else
-  #       echo "::warning::'$CLANG_FORMAT_NAME' not found. Installing..."
-  #       sudo apt-get update
-  #       if ! sudo apt-get install -y "$CLANG_FORMAT_NAME"; then
-  #         echo "::error::Failed to install '$CLANG_FORMAT_NAME'. Please check the version or try 'latest'."
-  #         exit 1
-  #       fi
-  #     fi
-  #     echo "clang_format_exe=$CLANG_FORMAT_NAME" >> "$GITHUB_OUTPUT"
-  # - name: "Prepare .clang-format file"
-  #   shell: bash
-  #   id: prepare-config
-  #   run: |
-  #     REPO_CLANG_FORMAT=".clang-format"
-  #     ACTION_DEFAULT_CLANG_FORMAT="${{ github.action_path }}/.clang-format.default"
-
-  #     if [ -f "$REPO_CLANG_FORMAT" ]; then
-  #       echo "::notice::Using repository's .clang-format file."
-  #       # cat "$REPO_CLANG_FORMAT"
-  #     else [ -f "$ACTION_DEFAULT_CLANG_FORMAT" ]; then
-  #       echo "::notice::Repository does not have a .clang-format file. Using the action's default."
-  #       cp "$ACTION_DEFAULT_CLANG_FORMAT" "$REPO_CLANG_FORMAT"
-  #     fi
   - name: Run clang-format check
     id: check-format
     shell: bash
