@@ -32,8 +32,8 @@ runs:
     shell: bash
     run: |
       # Slience safe.directory warnings when a job is running within a container 
-      git config --global --add safe.directory *
-      git fetch origin ${{ inputs.branch_name }} --depth=1
+      /usr/bin/git config --global --add safe.directory '*'
+      /usr/bin/git fetch origin ${{ inputs.branch_name }} --depth=1
   - name: Run clang-format check
     id: check-format
     shell: bash
