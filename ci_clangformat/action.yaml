@@ -31,8 +31,8 @@ runs:
   - name: "Fetch HEAD of ${{ inputs.branch_name }} branch"
     shell: bash
     run: |
-      # Slience safe.directory warnings when a job is running within a container 
-      /usr/bin/git config --global --add safe.directory '*'
+      # # Slience safe.directory warnings when a job is running within a container 
+      # /usr/bin/git config --global --add safe.directory safe.directory '*'
       /usr/bin/git fetch origin ${{ inputs.branch_name }} --depth=1
   - name: Run clang-format check
     id: check-format
