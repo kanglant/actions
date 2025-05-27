@@ -11,8 +11,6 @@ root; otherwise, it will use the .clang-format.default under this folder.
 This action offers the following configuration through its inputs:
 * `clang_format_version`: Choose the exact clang-format version to use,
  with `20.1.5` as the default to align with recent stable releases.
-* `branch_name`: Specify the name of your repository branch (`main` by
- default) for comparing changes within the pull requests.
 
 ## Resolving Formatting Failures
 If a workflow run fails due to formatting violations, you're expected to

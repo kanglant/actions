@@ -1,4 +1,4 @@
-# Copyright 2024 Google LLC
+# Copyright 2025 Google LLC
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,34 +18,37 @@ inputs:
     description: 'The clang-format version to use.'
     required: true
     default: "20.1.5"
-  branch_name:
-    description: 'The repository branch used for fetching comparisons.'
-    required: true
-    default: 'main'
 
 runs:
   using: "composite"
   steps:
   - name: "Checking out repository"
     uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-  - name: "Fetch HEAD of ${{ inputs.branch_name }} branch"
-    shell: bash
-    run: |
-      # Silence safe.directory warnings when a job is running within a container 
-      /usr/bin/git config --global --add safe.directory '*'
-      /usr/bin/git fetch origin ${{ inputs.branch_name }} --depth=1
+    with:
+      fetch-depth: 0 # Fetch full history for accurate diffing
   - name: Run clang-format check
     id: check-format
     shell: bash
+    env:
+      REPO_CLANG_FORMAT: .clang-format
+      ACTION_DEFAULT_CLANG_FORMAT: ${{ github.action_path }}.clang-format.default
+      CLANG_FORMAT_VERSION: ${{ inputs.clang_format_version }}
+      TARGET_BRANCH: ${{ github.base_ref }}
     run: |
-      REPO_CLANG_FORMAT=".clang-format"
-      ACTION_DEFAULT_CLANG_FORMAT="${{ github.action_path }}/.clang-format.default"
+      FILE_PATTERNS="*.cc *.h"
+      CLANG_FORMAT_COMMON_ARGS="--dry-run --Werror --verbose"
+
+      # Add this line to resolve the dubious ownership error
+      git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      # Compare PR head against the base branch to find changed files.
+      GIT_DIFF_CMD="git diff -z --name-only --diff-filter=d origin/$TARGET_BRANCH HEAD -- $FILE_PATTERNS"
 
       if [ -f "$REPO_CLANG_FORMAT" ]; then
         echo "::notice::Using repository's .clang-format file."
         # uvx (an alias for `uv tool run`) installs and runs clang-format with a specific version.
-        uvx clang-format==${{ inputs.clang_format_version }} --dry-run --Werror --verbose $(git diff --name-only origin/main HEAD -- '*.cc' '*.h')
+        $GIT_DIFF_CMD | xargs -0 uvx clang-format==$CLANG_FORMAT_VERSION $CLANG_FORMAT_COMMON_ARGS
       else
-        echo "::notice::Repository does not have a .clang-format file. Using the action's default."
-        uvx clang-format==${{ inputs.clang_format_version }} -style=file:$ACTION_DEFAULT_CLANG_FORMAT --dry-run --Werror --verbose $(git diff --name-only origin/main HEAD -- '*.cc' '*.h')
+        echo "::notice::Repository does not have a .clang-format file. Using the action's default under $ACTION_DEFAULT_CLANG_FORMAT."
+        $GIT_DIFF_CMD | xargs -0 uvx clang-format==$CLANG_FORMAT_VERSION -style=file:$ACTION_DEFAULT_CLANG_FORMAT $CLANG_FORMAT_COMMON_ARGS
       fi
