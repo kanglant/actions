@@ -27,7 +27,7 @@ runs:
     env:
       TARGET_BRANCH: ${{ github.base_ref }}
     run: |
-      FILE_PATTERNS="BUILD */BUILD"
+      FILE_PATTERNS="BUILD */BUILD *.bzl"
 
       # Add this line to resolve the dubious git ownership error
       git config --global --add safe.directory "$GITHUB_WORKSPACE"
