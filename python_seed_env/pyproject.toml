@@ -1,0 +1,68 @@
+[build-system]
+# Specifies the build backend to use and its requirements.
+# For setuptools, this is the standard configuration.
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+# Core project metadata (PEP 621)
+name = "seed-env"
+version = "0.1.0"
+authors = [
+  { name="ml-velocity authors", email="ml-velocity-team+seed-env@google.com" },
+]
+description = "A CLI tool to seed your environment with various configurations."
+readme = "README.md" # Path to your README file
+requires-python = ">=3.7"
+# TODO: Add a LICENSE file
+license = { text = "MIT License" } # Or { file = "LICENSE" } if you have a separate LICENSE file
+keywords = ["cli", "environment", "seeding", "configuration"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Utilities",
+]
+
+# Project runtime dependencies
+dependencies = [
+    "uv",
+    "requests",
+]
+
+[project.urls]
+# Links to your project's homepage, bug tracker, etc.
+Homepage = "https://github.com/google-ml-infra/actions/python_seed_env"
+# "Bug Tracker" = "https://github.com/google-ml-infra/actions/python_seed_env/issues"
+"Source Code" = "https://github.com/google-ml-infra/actions/python_seed_env"
+
+[project.scripts]
+# Defines your command-line entry points
+# This creates the `seed-env` command that calls `main` in `seed_env/cli.py`
+seed-env = "seed_env.cli:main"
+
+[project.optional-dependencies]
+# Defines optional groups of dependencies, e.g., for development or specific features.
+dev = [
+    "pytest",
+    # Add other development dependencies here
+]
+
+[tool.setuptools]
+# Configuration specific to the setuptools build backend.
+# This tells setuptools where to find your package's source code.
+# The 'packages' key uses find_packages, starting from the current directory,
+# and filtering to include only 'seed_env'.
+packages = ["seed_env"] # This assumes your package is directly under 'python_seed_env/seed_env'
+# include-package-data = false
+
+# pyproject.toml
+
+[tool.pytest.ini_options]
+# Pytest configuration
+# Corrected testpaths to point to the 'tests' directory directly under python_seed_env
+testpaths = ["tests"]
+addopts = "--strict-markers --cov=seed_env --cov-report=term-missing --no-cov-on-fail"
