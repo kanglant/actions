@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
