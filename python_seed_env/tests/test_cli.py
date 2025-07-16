@@ -1,6 +1,21 @@
+"""
+Copyright 2025 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 import pytest
 import sys
-from pathlib import Path
 
 import seed_env.cli
 
@@ -14,7 +29,7 @@ def test_cli_prints_help_on_no_args(monkeypatch, capsys):
 
 def test_cli_error_on_missing_required(monkeypatch, capsys):
     # Simulate missing required arguments
-    monkeypatch.setattr(sys, "argv", ["seed_env/cli.py", "--seed-project", "jax"])
+    monkeypatch.setattr(sys, "argv", ["seed_env/cli.py", "--seed-config", "jax_seed.yaml"])
     with pytest.raises(SystemExit):
         seed_env.cli.main()
     captured = capsys.readouterr()
@@ -27,7 +42,7 @@ def test_cli_local_project(monkeypatch, tmp_path, mocker):
     monkeypatch.setattr(sys, "argv", [
         "seed_env/cli.py",
         "--local-requirements", str(tmp_path),
-        "--seed-project", "jax",
+        "--seed-config", "jax_seed.yaml",
         "--python-version", "3.12"
     ])
     # Mock EnvironmentSeeder and its method
@@ -44,7 +59,7 @@ def test_cli_remote_project(monkeypatch, mocker):
         "--host-repo", "org/repo",
         "--host-requirements", "requirements.txt",
         "--host-commit", "abc123",
-        "--seed-project", "jax",
+        "--seed-config", "jax_seed.yaml",
         "--python-version", "3.12"
     ])
     # Mock EnvironmentSeeder and its method

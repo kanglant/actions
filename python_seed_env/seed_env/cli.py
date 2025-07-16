@@ -1,12 +1,28 @@
+"""
+Copyright 2025 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 import argparse
 import os
 import sys
 import logging
 
 from seed_env.config import (
-    DEFAULT_PROJECT_COMMIT, DEFAULT_SEED_PROJECT,
-    DEFAULT_PYTHON_VERSION, DEFAULT_HARDWARE, DEFAULT_BUILD_PROJECT,
-    SUPPORTED_HARDWARE, SUPPORTED_SEED_PROJECTS,
+    DEFAULT_PROJECT_COMMIT, DEFAULT_PYTHON_VERSION,
+    DEFAULT_HARDWARE, DEFAULT_BUILD_PROJECT,
+    SUPPORTED_HARDWARE,
 )
 from seed_env.core import EnvironmentSeeder
 
@@ -45,7 +61,7 @@ def main():
     parser.add_argument(
         "--host-requirements", # Not part of the exclusive group
         type=str,
-        help="The path to the main requirements file within the host repository (e.g., 'requirements.txt'). "
+        help="Path to the main requirements file within the host repository (e.g., 'requirements.txt' at the repo root). "
              "Required when --host-repo is used."
     )
 
@@ -60,34 +76,34 @@ def main():
         "--host-name", # Applies when --local-requirements is used
         type=str,
         default="local_host",
-        help="Name of the local host project. Used to generate the output directory name and python package."
+        help="Name of the local host project. Used to generate the output directory name and python package name."
     )
 
     # --- Common Arguments ---
     parser.add_argument(
-        "--seed-project",
+        "--seed-config",
         type=str,
-        default=DEFAULT_SEED_PROJECT,
-        choices=SUPPORTED_SEED_PROJECTS,
-        help=f"The seed project to use for generating the environment. Supported: {', '.join(SUPPORTED_SEED_PROJECTS)}"
+        default="jax_seed.yaml",
+        help="Path to the configuration file of a seed project to use for generating the environment."
+             "First search the file, e.g., jax_seed.yaml, in package data, then local paths."
     )
     parser.add_argument(
         "--seed-commit",
         type=str,
-        default="latest", # Convention for "latest release"
+        default="latest",
         help="The tag or commit hash of the seed repo (e.g., Tag 'jax-v0.6.2' in the jax-ml/jax github repo). "
              "Use 'latest' to try and find the most recent stable release version."
     )
     parser.add_argument(
         "--python-version",
         type=str,
-        default=DEFAULT_PYTHON_VERSION, # Common default
+        default=DEFAULT_PYTHON_VERSION,
         help="The target Python version for the environment (e.g., '3.12')."
     )
     parser.add_argument(
         "--hardware",
         type=str,
-        default=DEFAULT_HARDWARE, # Common default
+        default=DEFAULT_HARDWARE,
         choices=SUPPORTED_HARDWARE,
         help=f"The target hardware for the environment. Supported: {', '.join(SUPPORTED_HARDWARE)}"
     )
@@ -151,9 +167,9 @@ def main():
         parser.print_help()
         sys.exit(1)
 
-    # --- Orchestrate the core logic (This is where your functions will go!) ---
+    # --- Orchestrate the core logic ---
     logging.info(f"Starting environment seeding for project: '{host_name}' ({host_source_type})")
-    logging.info(f"Seed Project: {args.seed_project}")
+    logging.info(f"Seed Config: {args.seed_config}")
     logging.info(f"Seed Commit: {args.seed_commit}")
     logging.info(f"Python Version: {args.python_version}")
     logging.info(f"Hardware: {args.hardware}")
@@ -164,7 +180,7 @@ def main():
     if host_source_type == "remote":
         logging.info(f"Host Repo: {host_github_org}/{host_github_repo} (Commit/Tag: {args.host_commit})")
         logging.info(f"Host Requirements File: {args.host_requirements}")
-    else: # local
+    else:
         logging.info(f"Local Requirements File Path: {host_requirements_file_path}")
 
     try:
@@ -174,7 +190,7 @@ def main():
             host_github_org_repo=args.host_repo,
             host_requirements_file_path=host_requirements_file_path,
             host_commit=host_commit,
-            seed_project=args.seed_project,
+            seed_config=args.seed_config,
             seed_tag_or_commit=args.seed_commit,
             python_version=args.python_version,
             hardware=args.hardware,

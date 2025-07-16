@@ -1,23 +1,42 @@
+"""
+Copyright 2025 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 import os
 import pytest
 from seed_env.config import DEPS_EXCLUDED_FROM_GPU_ENV
 
 from seed_env.utils import (
-    convert_deps_to_lower_bound,
-    lower_boud_deps_to_string,
-    read_requirements_lock_file,
-    replace_dependencies_in_project_toml,
     valid_python_version_format,
-    lock_to_lower_bound_project,
-    build_pypi_package,
     run_command,
-    download_remote_git_file,
     get_latest_project_version_from_pypi,
+    generate_minimal_pyproject_toml,
+)
+from seed_env.git_utils import (
+    download_remote_git_file,
     resolve_github_tag_to_commit,
     is_valid_commit_hash,
-    looks_like_commit_hash,
-    generate_minimal_pyproject_toml,
+    looks_like_commit_hash
+)
+from seed_env.uv_utils import (
+    build_pypi_package,
     build_seed_env,
+    lock_to_lower_bound_project,
+    _read_pinned_deps_from_a_req_lock_file,
+    _convert_pinned_deps_to_lower_bound,
+    _replace_dependencies_in_project_toml
 )
 
 def test_download_remote_git_file(tmp_path, mocker):
@@ -109,9 +128,9 @@ version = "0.1.0"
 """)
 
     # Mock run_command to track calls
-    mock_run_command = mocker.patch("seed_env.utils.run_command")
+    mock_run_command = mocker.patch("seed_env.uv_utils.run_command")
     mock_os_remove = mocker.patch("os.remove")
-    mock_lock_to_lower_bound_project  = mocker.patch("seed_env.utils.lock_to_lower_bound_project")
+    mock_lock_to_lower_bound_project  = mocker.patch("seed_env.uv_utils.lock_to_lower_bound_project")
 
     build_seed_env(
         str(host_requirements_file),
@@ -169,20 +188,13 @@ version = "0.1.0"
 def test_convert_deps_to_lower_bound():
     pinned = ["foo==1.2.3", "bar==4.5.6"]
     expected = ["foo>=1.2.3", "bar>=4.5.6"]
-    assert convert_deps_to_lower_bound(pinned) == expected
-
-def test_lower_boud_deps_to_string():
-    deps = ["foo>=1.2.3", "bar>=4.5.6"]
-    result = lower_boud_deps_to_string(deps)
-    print(result)
-    assert "foo>=" in result and "bar>=" in result
-    assert result.startswith("dependencies = [")
+    assert _convert_pinned_deps_to_lower_bound(pinned) == expected
 
 def test_read_requirements_lock_file(tmp_path):
     content = "foo==1.2.3\nbar==4.5.6\n# comment\nbaz @ git+https://repo.git\n"
     file = tmp_path / "lock.txt"
     file.write_text(content)
-    result = read_requirements_lock_file(str(file))
+    result = _read_pinned_deps_from_a_req_lock_file(str(file))
     assert "foo==1.2.3" in result
     assert "bar==4.5.6" in result
     assert "baz @ git+https://repo.git" in result
@@ -199,7 +211,7 @@ dependencies = [
     new_deps = 'dependencies = [\n    "foo>=1.2.3",\n    "bar>=4.5.6"\n]'
     toml_file = tmp_path / "pyproject.toml"
     toml_file.write_text(toml_content)
-    replace_dependencies_in_project_toml(new_deps, str(toml_file))
+    _replace_dependencies_in_project_toml(new_deps, str(toml_file))
     updated = toml_file.read_text()
     assert "foo>=1.2.3" in updated
     assert "bar>=4.5.6" in updated

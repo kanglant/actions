@@ -1,14 +1,32 @@
-import logging
+"""
+Copyright 2025 Google LLC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 import os
-from seed_env.seeders import SEEDER_REGISTRY
-from seed_env.utils import (
-    download_remote_git_file,
-    generate_minimal_pyproject_toml,
-    build_seed_env,
-    build_pypi_package
-)
+import logging
+import yaml
+import importlib.resources
+from seed_env.seeder import Seeder
+from seed_env.utils import generate_minimal_pyproject_toml
+from seed_env.git_utils import download_remote_git_file
+from seed_env.uv_utils import build_seed_env, build_pypi_package
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+
+# Path within the installed package (for package data)
+PACKAGE_CONFIG_DIR_TRAVERSABLE = importlib.resources.files('seed_env') / 'seed_configs'
 
 class EnvironmentSeeder:
     """
@@ -32,7 +50,7 @@ class EnvironmentSeeder:
             host_github_org_repo: str,
             host_requirements_file_path: str,
             host_commit: str,
-            seed_project: str,
+            seed_config: str,
             seed_tag_or_commit: str,
             python_version: str,
             hardware: str,
@@ -44,15 +62,50 @@ class EnvironmentSeeder:
         self.host_github_org_repo = host_github_org_repo
         self.host_requirements_file_path = host_requirements_file_path
         self.host_commit = host_commit
-        self.seed_project = seed_project
+        self.seed_config_input = seed_config
+        self.loaded_seed_config = None
         self.seed_tag_or_commit = seed_tag_or_commit
         self.python_version = python_version
         self.hardware = hardware
         self.build_pypi_package = build_pypi_package
         self.output_dir = output_dir
 
-        if seed_project not in SEEDER_REGISTRY:
-            raise ValueError(f"Unsupported seed project: {seed_project}. Supported: {list(SEEDER_REGISTRY.keys())}")
+        self._load_seed_config()
+    
+    def _load_seed_config(self):
+        """
+        Loads configuration data for a seeder.
+
+        It employs a two-tiered lookup strategy to find the specified YAML configuration file:
+        1. Package Data First: It initially attempts to locate the configuration file as a package data resource
+            in a seed_configs subfolder.
+        2. Local File Fallback: If the file isn't found within the package data, it then attempts to load it
+            from a local, absolute file path.
+        """
+        try:
+            package_config_file_traversable = PACKAGE_CONFIG_DIR_TRAVERSABLE / self.seed_config_input
+            logging.info(f"Attempting to load seed config from package data: {package_config_file_traversable}")
+            with package_config_file_traversable.open('r') as f:
+                self.loaded_seed_config = yaml.safe_load(f)
+            logging.info("Successfully loaded seed config from package data.")
+        except FileNotFoundError:
+            logging.info(f"Config file '{self.seed_config_input}' not found in package data. Falling back to local lookup.")
+            local_config_file_path = os.path.abspath(self.seed_config_input)
+            if os.path.exists(local_config_file_path):
+                logging.info(f"Loading seed config from local path: {local_config_file_path}")
+                with open(local_config_file_path, 'r') as f:
+                    self.loaded_seed_config = yaml.safe_load(f)
+                logging.info("Successfully loaded seed config from local path.")
+            else:
+                raise FileNotFoundError(
+                    f"Seed configuration file '{self.seed_config_input}' not found in package data "
+                    f"({package_config_file_traversable}) nor at local path ({local_config_file_path})."
+                )
+
+        # Ensure seed_config was loaded successfully before proceeding
+        if self.loaded_seed_config is None:
+             raise RuntimeError(f"Failed to load seed configuration for '{self.seed_config_input}'.")
+        
 
     def seed_environment(self):
         """
@@ -98,14 +151,14 @@ class EnvironmentSeeder:
         else:
             raise ValueError(f"Unsupported host source type: {self.host_source_type}. Supported: 'remote', 'local'.")
             
-        # 2. Initialize the seeder instance, passing the path where the seed requirements lock files will be downloaded
-        SeederClass = SEEDER_REGISTRY[self.seed_project]
-        self.seeder = SeederClass(
+        # 2. Initialize the seeder instance with the seed config, passing the path where the seed requirements lock files will be downloaded
+        self.seeder = Seeder(
             seed_tag_or_commit=self.seed_tag_or_commit,
+            config=self.loaded_seed_config,
             download_dir=self.download_dir + "/seed",
         )
-        logging.info(f"Using {self.seeder.framework_name} at tag/commit {self.seed_tag_or_commit} on {self.seeder.github_org_repo} as seed")
-        
+        logging.info(f"Using {self.seeder.pypi_project_name} at tag/commit {self.seed_tag_or_commit} on {self.seeder.github_org_repo} as seed")
+
         # 3. Download the seed lock file for the specified Python version
         SEED_LOCK_FILE = os.path.abspath(self.seeder.download_seed_lock_requirement(self.python_version))
 
