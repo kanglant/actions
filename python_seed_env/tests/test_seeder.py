@@ -1,7 +1,6 @@
 import pytest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
-import logging
+from unittest.mock import patch
 import os
 
 from seed_env.seeder import Seeder
@@ -108,7 +107,7 @@ def test_download_seed_lock_requirement_latest_tag(mock_logging, mock_download_r
     # Assertions
     mock_get_latest_project_version_from_pypi.assert_called_once_with("example-project")
     mock_resolve_github_tag_to_commit.assert_called_once_with("example_org/example_repo", "v1.2.3")
-    expected_file_url = f"https://raw.githubusercontent.com/example_org/example_repo/abcdef123456/seed_lock_py3_8.txt"
+    expected_file_url = "https://raw.githubusercontent.com/example_org/example_repo/abcdef123456/seed_lock_py3_8.txt"
     mock_download_remote_git_file.assert_called_once_with(expected_file_url, download_dir)
     assert result_path == os.path.abspath(os.path.join(download_dir, "downloaded_file.txt"))
 

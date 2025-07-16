@@ -144,7 +144,7 @@ version = "0.1.0"
     assert mock_run_command.called
     assert mock_os_remove.called
     assert mock_lock_to_lower_bound_project.called
-    
+
     # Collect all commands passed to run_command
     commands = [call.args[0] for call in mock_run_command.call_args_list]
     # Check for the expected uv add command to planting a seed
@@ -162,7 +162,7 @@ version = "0.1.0"
     # Check for the command to add the rest of deps from the host
     assert [
          "uv", "add", "--managed-python", "--no-sync", "--resolution=highest",
-         "--directory", str(output_dir), 
+         "--directory", str(output_dir),
          "-r", str(host_requirements_file),
     ] in commands
     # Check for the command to generate a full host lock file
@@ -184,7 +184,7 @@ version = "0.1.0"
         "--directory", str(output_dir),
         "--output-file", str(host_lock_file_name),
     ] in commands
-    
+
 def test_convert_deps_to_lower_bound():
     pinned = ["foo==1.2.3", "bar==4.5.6"]
     expected = ["foo>=1.2.3", "bar>=4.5.6"]
@@ -281,4 +281,3 @@ version = "0.1.0"
         build_pypi_package(str(output_dir))
     except FileNotFoundError:
         pytest.fail("build_pypi_package raised FileNotFoundError unexpectedly!")
-

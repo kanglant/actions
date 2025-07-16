@@ -66,7 +66,7 @@ def generate_minimal_pyproject_toml(project_name: str, python_version: str, outp
         raise ValueError("Project name cannot be empty in pyproject.toml.")
     if not valid_python_version_format(python_version):
         raise ValueError(f"Invalid Python version format: {python_version}. Expected format is 'X.Y'.")
-        
+
     # TODO: Pass the version as an argument
     # For now, we use a fixed version "0.1.0" as a placeholder.
     content = f"""\
@@ -86,7 +86,7 @@ dependencies = [
     except OSError as e:
         logging.error(f"Failed to write pyproject.toml to {pyproject_path}: {e}")
         raise
-    
+
 def run_command(command, cwd=None, capture_output=False, check=True):
     """
     Executes a shell command.

@@ -42,7 +42,7 @@ def build_seed_env(host_requirements_file: str, seed_lock_file: str, output_dir:
     pyproject_file = os.path.join(output_dir, "pyproject.toml")
     if not os.path.isfile(pyproject_file):
         raise FileNotFoundError(f"A minimal pyproject.toml file does not exist in output directory: {output_dir}")
-    
+
     # Remove uv.lock if it exists, as we will generate a new one
     uv_lock_file = os.path.join(output_dir, "uv.lock")
     if os.path.isfile(uv_lock_file):
@@ -80,7 +80,7 @@ def build_seed_env(host_requirements_file: str, seed_lock_file: str, output_dir:
 
     command = [
          "uv", "add", "--managed-python", "--no-sync", "--resolution=highest",
-         "--directory", output_dir, 
+         "--directory", output_dir,
          "-r", host_requirements_file,
     ]
     run_command(command)
@@ -130,7 +130,7 @@ def build_pypi_package(output_dir: str):
     pyproject_file = os.path.join(output_dir, "pyproject.toml")
     if not os.path.isfile(pyproject_file):
         raise FileNotFoundError(f"A pyproject.toml file does not exist in output directory: {output_dir}")
-    
+
     command = [
         "uv", "build", "--wheel",
         "--directory", output_dir,
@@ -217,4 +217,3 @@ def lock_to_lower_bound_project(host_lock_file: str, pyproject_toml: str):
     lower_bound_deps = _convert_pinned_deps_to_lower_bound(pinned_deps)
     new_deps = 'dependencies = [\n    "' + '",\n    "'.join(lower_bound_deps) + '"\n]'
     _replace_dependencies_in_project_toml(new_deps, pyproject_toml)
-

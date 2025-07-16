@@ -142,7 +142,7 @@ def main():
             logging.error(f"Error: Invalid --host-repo format: '{args.host_repo}'. Expected 'organization/repository_name'.")
             parser.print_help()
             sys.exit(1)
-        
+
         if not args.host_requirements:
             logging.error("Error: --host-requirements is required when --host-repo is used.")
             parser.print_help()
