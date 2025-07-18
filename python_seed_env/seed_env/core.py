@@ -17,16 +17,13 @@ limitations under the License.
 import os
 import logging
 import yaml
-import importlib.resources
+from importlib.resources import files
 from seed_env.seeder import Seeder
 from seed_env.utils import generate_minimal_pyproject_toml
 from seed_env.git_utils import download_remote_git_file
 from seed_env.uv_utils import build_seed_env, build_pypi_package
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
-
-# Path within the installed package (for package data)
-PACKAGE_CONFIG_DIR_TRAVERSABLE = importlib.resources.files("seed_env") / "seed_configs"
 
 
 class EnvironmentSeeder:
@@ -80,18 +77,18 @@ class EnvironmentSeeder:
 
     It employs a two-tiered lookup strategy to find the specified YAML configuration file:
     1. Package Data First: It initially attempts to locate the configuration file as a package data resource
-        in a seed_configs subfolder.
+        in a seeder_configs subfolder.
     2. Local File Fallback: If the file isn't found within the package data, it then attempts to load it
         from a local, absolute file path.
     """
     try:
-      package_config_file_traversable = (
-        PACKAGE_CONFIG_DIR_TRAVERSABLE / self.seed_config_input
+      package_config_file = files("seed_env.seeder_configs").joinpath(
+        self.seed_config_input
       )
       logging.info(
-        f"Attempting to load seed config from package data: {package_config_file_traversable}"
+        f"Attempting to load seed config from package data: {package_config_file}"
       )
-      with package_config_file_traversable.open("r") as f:
+      with package_config_file.open("r") as f:
         self.loaded_seed_config = yaml.safe_load(f)
       logging.info("Successfully loaded seed config from package data.")
     except FileNotFoundError:
@@ -107,7 +104,7 @@ class EnvironmentSeeder:
       else:
         raise FileNotFoundError(
           f"Seed configuration file '{self.seed_config_input}' not found in package data "
-          f"({package_config_file_traversable}) nor at local path ({local_config_file_path})."
+          f"({package_config_file}) nor at local path ({local_config_file_path})."
         )
 
     # Ensure seed_config was loaded successfully before proceeding
