@@ -16,7 +16,6 @@ limitations under the License.
 
 import os
 import pytest
-from seed_env.config import DEPS_EXCLUDED_FROM_GPU_ENV
 
 from seed_env.utils import (
   valid_python_version_format,
@@ -143,6 +142,9 @@ version = "0.1.0"
   mock_lock_to_lower_bound_project = mocker.patch(
     "seed_env.uv_utils.lock_to_lower_bound_project"
   )
+  mock_remove_hardware_specific_deps = mocker.patch(
+    "seed_env.uv_utils._remove_hardware_specific_deps"
+  )
 
   build_seed_env(
     str(host_requirements_file),
@@ -156,6 +158,8 @@ version = "0.1.0"
   assert mock_run_command.called
   assert mock_os_remove.called
   assert mock_lock_to_lower_bound_project.called
+  # Check for the expected uv remove command
+  assert mock_remove_hardware_specific_deps.call_count == 2
 
   # Collect all commands passed to run_command
   commands = [call.args[0] for call in mock_run_command.call_args_list]
@@ -171,17 +175,6 @@ version = "0.1.0"
     str(output_dir),
     "-r",
     str(seed_lock_file),
-  ] in commands
-  # Check for the expected uv remove command for GPU
-  assert [
-    "uv",
-    "remove",
-    "--managed-python",
-    "--resolution=highest",
-    "--no-sync",
-    "--directory",
-    str(output_dir),
-    *DEPS_EXCLUDED_FROM_GPU_ENV,
   ] in commands
   # Check for the command to add the rest of deps from the host
   assert [
