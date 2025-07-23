@@ -22,7 +22,7 @@ DEFAULT_HARDWARE = "tpu"
 DEFAULT_BUILD_PROJECT = False
 SUPPORTED_HARDWARE = ["tpu", "gpu"]
 
-DEPS_EXCLUDED_FROM_TPU_ENV = [
+GPU_SPECIFIC_DEPS = [
   "nvidia-cublas-cu12",
   "nvidia-cuda-cupti-cu12",
   "nvidia-cuda-nvcc-cu12",
@@ -37,8 +37,11 @@ DEPS_EXCLUDED_FROM_TPU_ENV = [
   "nvidia-nvshmem-cu12",
   "jax-cuda12-plugin",
   "jax-cuda12-pjrt",
+  "transformer-engine",
+  "transformer-engine[jax]",
+  "transformer-engine[pytorch]",
 ]
 
-DEPS_EXCLUDED_FROM_GPU_ENV = [
+TPU_SPECIFIC_DEPS = [
   "libtpu",
 ]

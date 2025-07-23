@@ -16,8 +16,9 @@ limitations under the License.
 
 import re
 import os
+import toml
 import logging
-from seed_env.config import DEPS_EXCLUDED_FROM_GPU_ENV, DEPS_EXCLUDED_FROM_TPU_ENV
+from seed_env.config import TPU_SPECIFIC_DEPS, GPU_SPECIFIC_DEPS
 from seed_env.utils import run_command
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -80,33 +81,7 @@ def build_seed_env(
   ]
   run_command(command)
 
-  if hardware == "tpu":
-    # Exclude gpu-only dependencies from the TPU environment
-    command = [
-      "uv",
-      "remove",
-      "--managed-python",
-      "--resolution=highest",
-      "--no-sync",
-      "--directory",
-      output_dir,
-      *DEPS_EXCLUDED_FROM_TPU_ENV,
-    ]
-    run_command(command)
-  elif hardware == "gpu":
-    # Exclude tpu-only dependencies, including libtpu, from the GPU environment
-    # This is crucial as JAX uses the existence of libtpu to determine if it is running on TPU or GPU.
-    command = [
-      "uv",
-      "remove",
-      "--managed-python",
-      "--resolution=highest",
-      "--no-sync",
-      "--directory",
-      output_dir,
-      *DEPS_EXCLUDED_FROM_GPU_ENV,
-    ]
-    run_command(command)
+  _remove_hardware_specific_deps(hardware, pyproject_file, output_dir)
 
   command = [
     "uv",
@@ -120,6 +95,8 @@ def build_seed_env(
     host_requirements_file,
   ]
   run_command(command)
+
+  _remove_hardware_specific_deps(hardware, pyproject_file, output_dir)
 
   command = [
     "uv",
@@ -282,3 +259,61 @@ def lock_to_lower_bound_project(host_lock_file: str, pyproject_toml: str):
   lower_bound_deps = _convert_pinned_deps_to_lower_bound(pinned_deps)
   new_deps = 'dependencies = [\n    "' + '",\n    "'.join(lower_bound_deps) + '"\n]'
   _replace_dependencies_in_project_toml(new_deps, pyproject_toml)
+
+
+def _get_required_dependencies_from_pyproject_toml(file_path="pyproject.toml"):
+  """Reads pyproject.toml and extracts dependency names."""
+  deps = []
+  if not os.path.exists(file_path):
+    return deps
+  try:
+    with open(file_path, "r") as f:
+      data = toml.load(f)
+    if "project" in data and "dependencies" in data["project"]:
+      for dep in data["project"]["dependencies"]:
+        # Extract the package name before any version specifiers
+        package_name = (
+          dep.split("==")[0]
+          .split(">=")[0]
+          .split("<=")[0]
+          .split("~=")[0]
+          .split("<")[0]
+          .split(">")[0]
+          .split("!=")[0]
+          .strip()
+        )
+        deps.append(package_name)
+    return deps
+  except Exception as e:
+    print(f"Error reading {file_path}: {e}")
+    return deps
+
+
+def _remove_hardware_specific_deps(hardware: str, pyproject_file: str, output_dir: str):
+  if hardware == "tpu":
+    hardware_specific_deps_list = GPU_SPECIFIC_DEPS.copy()
+  elif hardware == "gpu":
+    hardware_specific_deps_list = (TPU_SPECIFIC_DEPS.copy(),)
+  else:
+    logging.warning(f"Unknown hardware {hardware}. Please use tpu or gpu.")
+    return
+
+  project_deps = _get_required_dependencies_from_pyproject_toml(pyproject_file)
+
+  exclude_deps = []
+  for dep in hardware_specific_deps_list:
+    if dep in project_deps:
+      exclude_deps.append(dep)
+
+  if exclude_deps:
+    command = [
+      "uv",
+      "remove",
+      "--managed-python",
+      "--resolution=highest",
+      "--no-sync",
+      "--directory",
+      output_dir,
+      *exclude_deps,
+    ]
+    run_command(command)
