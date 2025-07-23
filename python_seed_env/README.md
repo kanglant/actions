@@ -19,3 +19,11 @@ seed-env --host-repo=AI-Hypercomputer/maxtext --host-requirements=requirements.t
 # Run the following command build lock files and a pypi package based on a local host requirement file and use the latest release jax as seed.
 seed-env --local-requirements=<local path to a requirements.txt file> --build-pypi-package
 ```
+
+## How to Add a New Seed Project?
+To add a new seed project, refer to the jax_seed.yaml file located in src/seed_env/seeder_configs. This folder stores seeder project configuration YAMLs for runtime data access (currently, only JAX is supported).
+
+Create a similar YAML file, updating the configuration values to match your seeder project. Then, invoke the seed-env CLI tool using the `--seed-config` flag, providing either a relative or absolute path to your new YAML file. The tool will first check its package data, then look for the file locally if not found.
+
+> [!WARNING]
+> This tool is still under construction at this time.

@@ -4,7 +4,7 @@ version = "1.0.0a1"
 authors = [
   { name="ml-velocity authors", email="ml-velocity-team+seed-env@google.com" },
 ]
-description = "A CLI tool to seed your environment with various configurations."
+description = "A CLI tool for environment setup that combines a seeder project with your specific requirements."
 readme = "README.md"
 requires-python = ">=3.7"
 license = "Apache-2.0"
