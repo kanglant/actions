@@ -1,6 +1,6 @@
 [project]
 name = "seed-env"
-version = "1.0.0a1"
+version = "0.1.0a1"
 authors = [
   { name="ml-velocity authors", email="ml-velocity-team+seed-env@google.com" },
 ]
