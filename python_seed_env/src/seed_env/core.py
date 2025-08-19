@@ -21,7 +21,11 @@ from importlib.resources import files
 from seed_env.seeder import Seeder
 from seed_env.utils import generate_minimal_pyproject_toml
 from seed_env.git_utils import download_remote_git_file
-from seed_env.uv_utils import build_seed_env, build_pypi_package, merge_project_toml_files
+from seed_env.uv_utils import (
+  build_seed_env,
+  build_pypi_package,
+  merge_project_toml_files,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -184,7 +188,9 @@ class EnvironmentSeeder:
     versioned_project_toml_files = []
     for python_version in self.python_versions:
       # Generate a subdir for each python version
-      versioned_output_dir = self.output_dir + "/python" + python_version.replace('.', '_')
+      versioned_output_dir = (
+        self.output_dir + "/python" + python_version.replace(".", "_")
+      )
       versioned_project_toml_files.append(versioned_output_dir + "/pyproject.toml")
       os.makedirs(versioned_output_dir, exist_ok=True)
 

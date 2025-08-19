@@ -221,7 +221,7 @@ def _convert_pinned_deps_to_lower_bound(pinned_deps):
       split_pinned_dep = pinned_dep.split(";")
       lower_bound_dep = split_pinned_dep[0].replace("==", ">=")
       if len(split_pinned_dep) > 1:
-        lower_bound_dep =  ";".join([lower_bound_dep] + split_pinned_dep[1:])
+        lower_bound_dep = ";".join([lower_bound_dep] + split_pinned_dep[1:])
     lower_bound_deps.append(lower_bound_dep)
 
   return lower_bound_deps
@@ -414,7 +414,9 @@ def calculate_merged_deps(file_paths: list):
     elif min_ver == max_ver:
       version_marker = f"python_version == '{min_ver}'"
     else:
-      version_marker = f"python_version >= '{min_ver}' and python_version <= '{max_ver}'"
+      version_marker = (
+        f"python_version >= '{min_ver}' and python_version <= '{max_ver}'"
+      )
 
     # Combine with any existing markers
     base_spec = dep_req[0].strip()
@@ -434,6 +436,7 @@ def calculate_merged_deps(file_paths: list):
 
   return min_project_version, sorted(final_deps)
 
+
 def merge_project_toml_files(file_paths: list, output_dir: str):
   """
   Merges multiple pyproject.toml files from file_paths into a single pyproject.toml at output_dir.
@@ -450,8 +453,8 @@ def merge_project_toml_files(file_paths: list, output_dir: str):
     raise ValueError("The list of file paths cannot be empty.")
 
   pyproject_file = os.path.join(output_dir, "pyproject.toml")
-  with open(file_paths[0], 'r') as source_file:
-    with open(pyproject_file, 'w') as destination_file:
+  with open(file_paths[0], "r") as source_file:
+    with open(pyproject_file, "w") as destination_file:
       destination_file.write(source_file.read())
 
   min_py_version, final_deps = calculate_merged_deps(file_paths)
