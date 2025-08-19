@@ -34,7 +34,7 @@ def test_environment_seeder_init_valid():
   )
   assert seeder.host_name == "myproj"
   assert seeder.seed_config_input == "jax_seed.yaml"
-  assert seeder.python_version == "3.12"
+  assert seeder.python_versions == ["3.12"]
 
 
 def test_environment_seeder_init_invalid_seed():
@@ -62,6 +62,7 @@ def test_seed_environment_remote(mocker, tmp_path):
   mock_generate_pyproject = mocker.patch(
     "seed_env.core.generate_minimal_pyproject_toml"
   )
+  mock_merge_project_toml_files = mocker.patch("seed_env.core.merge_project_toml_files")
   mock_build_env = mocker.patch("seed_env.core.build_seed_env")
   mock_build_pypi = mocker.patch("seed_env.core.build_pypi_package")
   # Mock Seeder instance and its method
@@ -92,6 +93,7 @@ def test_seed_environment_remote(mocker, tmp_path):
   assert mock_download.called
   assert mock_generate_pyproject.called
   assert mock_build_env.called
+  assert mock_merge_project_toml_files.called
   assert mock_build_pypi.called
   assert mock_seeder_instance.download_seed_lock_requirement.called
 

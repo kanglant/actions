@@ -21,7 +21,7 @@ from importlib.resources import files
 from seed_env.seeder import Seeder
 from seed_env.utils import generate_minimal_pyproject_toml
 from seed_env.git_utils import download_remote_git_file
-from seed_env.uv_utils import build_seed_env, build_pypi_package
+from seed_env.uv_utils import build_seed_env, build_pypi_package, merge_project_toml_files
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -64,7 +64,7 @@ class EnvironmentSeeder:
     self.seed_config_input = seed_config
     self.loaded_seed_config = None
     self.seed_tag_or_commit = seed_tag_or_commit
-    self.python_version = python_version
+    self.python_versions = python_version.split(",")
     self.hardware = hardware
     self.build_pypi_package = build_pypi_package
     self.output_dir = output_dir
@@ -175,28 +175,46 @@ class EnvironmentSeeder:
       f"Using {self.seeder.pypi_project_name} at tag/commit {self.seed_tag_or_commit} on {self.seeder.github_org_repo} as seed"
     )
 
-    # 3. Download the seed lock file for the specified Python version
-    SEED_LOCK_FILE = os.path.abspath(
-      self.seeder.download_seed_lock_requirement(self.python_version)
-    )
+    # Remove pyproject.toml if it exists, as we will generate a new one with merge_project_toml_files
+    pyproject_file = os.path.join(self.output_dir, "pyproject.toml")
+    if os.path.isfile(pyproject_file):
+      os.remove(pyproject_file)
+      logging.info(f"Removed existing pyproject.toml file: {pyproject_file}")
 
-    # 4. Generate a minimal pyproject.toml file for the specified Python version to the output directory
-    generate_minimal_pyproject_toml(
-      self.host_name, self.python_version, self.output_dir
-    )
+    versioned_project_toml_files = []
+    for python_version in self.python_versions:
+      # Generate a subdir for each python version
+      versioned_output_dir = self.output_dir + "/python" + python_version.replace('.', '_')
+      versioned_project_toml_files.append(versioned_output_dir + "/pyproject.toml")
+      os.makedirs(versioned_output_dir, exist_ok=True)
 
-    # Construct the host lock file name
-    HOST_LOCK_FILE_NAME = f"{self.host_name.replace('-', '_')}_requirements_lock_{self.python_version.replace('.', '_')}.txt"
-    # 5. Generate the pyproject.toml, uv.lock, and host_requirements.txt in the output directory
-    build_seed_env(
-      HOST_REQUIREMENTS_FILE,
-      SEED_LOCK_FILE,
-      self.output_dir,
-      self.hardware,
-      HOST_LOCK_FILE_NAME,
-    )
+      # 3. Download the seed lock file for the specified Python version
+      SEED_LOCK_FILE = os.path.abspath(
+        self.seeder.download_seed_lock_requirement(python_version)
+      )
+
+      # 4. Generate a minimal pyproject.toml file for the specified Python version to the output directory
+      generate_minimal_pyproject_toml(
+        self.host_name, python_version, versioned_output_dir
+      )
+
+      # Construct the host lock file name
+      HOST_LOCK_FILE_NAME = f"{self.host_name.replace('-', '_')}_requirements_lock_{python_version.replace('.', '_')}.txt"
+      # 5. Generate the pyproject.toml, uv.lock, and host_requirements.txt in the output directory
+      build_seed_env(
+        HOST_REQUIREMENTS_FILE,
+        SEED_LOCK_FILE,
+        versioned_output_dir,
+        self.hardware,
+        HOST_LOCK_FILE_NAME,
+      )
+
+    # Combine the individual pyproject.toml files from each python_version subdirectory
+    # into a single pyproject.toml file at the output dir.
+    merge_project_toml_files(versioned_project_toml_files, self.output_dir)
 
     # 6. Build pypi package
     if self.build_pypi_package:
+      # Use the new pyproject.toml file at the output dir to build the package.
       build_pypi_package(self.output_dir)
       logging.info("Successfully build a python package")

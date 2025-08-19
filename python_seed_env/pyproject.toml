@@ -1,6 +1,6 @@
 [project]
 name = "seed-env"
-version = "0.1.0a1"
+version = "0.1.0a2"
 authors = [
   { name="ml-velocity authors", email="ml-velocity-team+seed-env@google.com" },
 ]
@@ -22,12 +22,13 @@ dependencies = [
     "pyyaml",
     "requests",
     "toml",
+    "packaging",
 ]
 
 [project.urls]
 # Links to the project's homepage, bug tracker, etc.
-Homepage = "https://github.com/google-ml-infra/actions/python_seed_env"
-"Source Code" = "https://github.com/google-ml-infra/actions/python_seed_env"
+Homepage = "https://github.com/google-ml-infra/actions/tree/main/python_seed_env"
+"Source Code" = "https://github.com/google-ml-infra/actions/tree/main/python_seed_env"
 # Other: "Bug Tracker"
 
 [project.scripts]

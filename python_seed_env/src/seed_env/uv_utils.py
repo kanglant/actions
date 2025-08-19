@@ -18,6 +18,10 @@ import re
 import os
 import toml
 import logging
+
+from collections import defaultdict
+from packaging.version import Version
+
 from seed_env.config import TPU_SPECIFIC_DEPS, GPU_SPECIFIC_DEPS
 from seed_env.utils import run_command
 
@@ -170,7 +174,6 @@ def build_pypi_package(output_dir: str):
   command = [
     "uv",
     "build",
-    "--wheel",
     "--directory",
     output_dir,
   ]
@@ -215,23 +218,28 @@ def _convert_pinned_deps_to_lower_bound(pinned_deps):
   for pinned_dep in pinned_deps:
     lower_bound_dep = pinned_dep
     if "==" in pinned_dep:
-      lower_bound_dep = pinned_dep.replace("==", ">=")
+      split_pinned_dep = pinned_dep.split(";")
+      lower_bound_dep = split_pinned_dep[0].replace("==", ">=")
+      if len(split_pinned_dep) > 1:
+        lower_bound_dep =  ";".join([lower_bound_dep] + split_pinned_dep[1:])
     lower_bound_deps.append(lower_bound_dep)
 
   return lower_bound_deps
 
 
-def _replace_dependencies_in_project_toml(new_deps: str, filepath: str):
+def replace_dependencies_in_project_toml(new_deps_list: list, filepath: str):
   """
   Replaces the dependencies section in a pyproject.toml file with a new set of dependencies.
 
   Args:
-      new_deps (str): The new dependencies block as a string.
+      new_deps_list (list): The new dependencies list.
       filepath (str): Path to the pyproject.toml file to update.
 
-  This function reads the specified pyproject.toml file, finds the existing [project] dependencies array,
-  and replaces it with the provided new_deps string. The updated content is then written back to the file.
+  This function reads the specified pyproject.toml file, finds the existing project dependencies array,
+  and replaces it with the provided new_deps_list list. The updated content is then written back to the file.
   """
+  new_deps = 'dependencies = [\n    "' + '",\n    "'.join(new_deps_list) + '",\n]'
+
   dependencies_regex = re.compile(
     r"^dependencies\s*=\s*\[(\n+\s*.*,\s*)*[\n\r]*\]", re.MULTILINE
   )
@@ -239,6 +247,28 @@ def _replace_dependencies_in_project_toml(new_deps: str, filepath: str):
   with open(filepath, "r", encoding="utf-8") as f:
     content = f.read()
   new_content = dependencies_regex.sub(new_deps, content)
+
+  with open(filepath, "w", encoding="utf-8") as f:
+    f.write(new_content)
+
+
+def replace_python_requirement_in_project_toml(min_python: str, filepath: str):
+  """
+  Replaces the pinned requires-python section in a pyproject.toml file with a lower bound.
+
+  Args:
+      min_python (str): Minimum Python version to support.
+      filepath (str): Path to the pyproject.toml file to update.
+
+  This function reads the specified pyproject.toml file, finds the existing project requires-python string,
+  and replaces it with the min_python as the lower bound. The updated content is then written back to the file.
+  """
+  min_python_regex = re.compile(r'requires-python\s*=\s*".*?"')
+  new_requires_line = f'requires-python = ">={min_python}"'
+
+  with open(filepath, "r", encoding="utf-8") as f:
+    content = f.read()
+  new_content = min_python_regex.sub(new_requires_line, content)
 
   with open(filepath, "w", encoding="utf-8") as f:
     f.write(new_content)
@@ -257,8 +287,7 @@ def lock_to_lower_bound_project(host_lock_file: str, pyproject_toml: str):
   """
   pinned_deps = _read_pinned_deps_from_a_req_lock_file(host_lock_file)
   lower_bound_deps = _convert_pinned_deps_to_lower_bound(pinned_deps)
-  new_deps = 'dependencies = [\n    "' + '",\n    "'.join(lower_bound_deps) + '"\n]'
-  _replace_dependencies_in_project_toml(new_deps, pyproject_toml)
+  replace_dependencies_in_project_toml(lower_bound_deps, pyproject_toml)
 
 
 def _get_required_dependencies_from_pyproject_toml(file_path="pyproject.toml"):
@@ -318,3 +347,113 @@ def _remove_hardware_specific_deps(hardware: str, pyproject_file: str, output_di
       *exclude_deps,
     ]
     run_command(command)
+
+
+def calculate_merged_deps(file_paths: list):
+  """
+  Merges pyproject.toml files by grouping identical dependencies and creating
+  a Python version range marker for them.
+
+  This function works by:
+  1.  Grouping dependencies that are identical strings across multiple files.
+  2.  For each group, determining the min and max Python version it supports.
+  3.  Creating a combined version marker (e.g., "python_version >= '3.10'") if needed.
+  4.  Appending this new marker to the dependency string.
+
+  Args:
+      file_paths: A list of Path objects for the pyproject.toml files.
+
+  Returns:
+      A minimal supported python version.
+      A dictionary representing the merged pyproject.toml configuration.
+
+  Raises:
+      ValueError: If the list of file paths is empty or a Python version
+                  cannot be parsed from a file's content.
+  """
+  if not file_paths:
+    raise ValueError("The list of file paths cannot be empty.")
+
+  # Step 1: Group identical dependencies and collect their Python versions
+  # The key is the full dependency string, the value is a list of versions
+  dep_groups = defaultdict(list)
+  all_python_versions = set()
+  version_pattern = re.compile(r"(\d+\.\d+)")
+
+  for path in file_paths:
+    if not os.path.isfile(path):
+      raise ValueError(f"An versioned pyproject.toml is not found: {path}")
+    config = toml.load(path)
+    requires_python_str = config.get("project", {}).get("requires-python", "")
+    match = version_pattern.search(requires_python_str)
+    if not match:
+      raise ValueError(f"Could not parse Python version from {path}")
+
+    py_version = Version(match.group(1))
+    all_python_versions.add(py_version)
+
+    dependencies = config.get("project", {}).get("dependencies", [])
+    for dep_string in dependencies:
+      dep_groups[dep_string].append(py_version)
+
+  min_project_version = min(all_python_versions)
+  max_project_version = max(all_python_versions)
+
+  final_deps = []
+  # Step 2: Process the groups to create new, merged dependency strings
+  for dep_string, versions in dep_groups.items():
+    dep_req = dep_string.split(";", 1)
+    versions.sort()
+    min_ver, max_ver = versions[0], versions[-1]
+
+    # Create a version marker based on the collected versions
+    if min_ver == min_project_version and max_ver == max_project_version:
+      version_marker = ""
+    elif max_ver == max_project_version:
+      version_marker = f"python_version >= '{min_ver}'"
+    elif min_ver == max_ver:
+      version_marker = f"python_version == '{min_ver}'"
+    else:
+      version_marker = f"python_version >= '{min_ver}' and python_version <= '{max_ver}'"
+
+    # Combine with any existing markers
+    base_spec = dep_req[0].strip()
+    if len(dep_req) > 1:
+      old_marker = dep_req[1].strip()
+      if version_marker:
+        new_marker = f"{old_marker} and {version_marker}"
+      else:
+        new_marker = old_marker
+    else:
+      new_marker = version_marker
+
+    if new_marker:
+      final_deps.append(f"{base_spec} ; {new_marker}")
+    else:
+      final_deps.append(f"{base_spec}")
+
+  return min_project_version, sorted(final_deps)
+
+def merge_project_toml_files(file_paths: list, output_dir: str):
+  """
+  Merges multiple pyproject.toml files from file_paths into a single pyproject.toml at output_dir.
+
+  This function:
+    1. Assumes the pyproject.toml files are identical except for their dependency lists and
+      requires-python values.
+    2. Finds the minimal Python version from all the files to use as a new lower bound for the final file.
+    3. Combines all dependencies, adding a Python version markers if needed.
+    4. Writes a new pyproject.toml file in the output_dir, using the first input file as a template.
+    5. Updates the new pyproject.toml using the the combined dependency list and the minimal Python version.
+  """
+  if not file_paths:
+    raise ValueError("The list of file paths cannot be empty.")
+
+  pyproject_file = os.path.join(output_dir, "pyproject.toml")
+  with open(file_paths[0], 'r') as source_file:
+    with open(pyproject_file, 'w') as destination_file:
+      destination_file.write(source_file.read())
+
+  min_py_version, final_deps = calculate_merged_deps(file_paths)
+  replace_python_requirement_in_project_toml(min_py_version, pyproject_file)
+  replace_dependencies_in_project_toml(final_deps, pyproject_file)

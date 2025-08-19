@@ -35,7 +35,7 @@ from seed_env.uv_utils import (
   lock_to_lower_bound_project,
   _read_pinned_deps_from_a_req_lock_file,
   _convert_pinned_deps_to_lower_bound,
-  _replace_dependencies_in_project_toml,
+  replace_dependencies_in_project_toml,
 )
 
 
@@ -103,7 +103,7 @@ def test_generate_minimal_pyproject_toml(tmp_path):
   out_path = generate_minimal_pyproject_toml("myproj", "3.12", str(tmp_path))
   assert os.path.isfile(out_path)
   content = open(out_path).read()
-  assert 'name = "myproj-meta"' in content
+  assert 'name = "myproj"' in content
   assert 'requires-python = "==3.12.*"' in content
 
 
@@ -252,10 +252,10 @@ dependencies = [
     "bar==4.5.6",
 ]
 """
-  new_deps = 'dependencies = [\n    "foo>=1.2.3",\n    "bar>=4.5.6"\n]'
+  new_deps_list = ["foo>=1.2.3", "bar>=4.5.6"]
   toml_file = tmp_path / "pyproject.toml"
   toml_file.write_text(toml_content)
-  _replace_dependencies_in_project_toml(new_deps, str(toml_file))
+  replace_dependencies_in_project_toml(new_deps_list, str(toml_file))
   updated = toml_file.read_text()
   assert "foo>=1.2.3" in updated
   assert "bar>=4.5.6" in updated
