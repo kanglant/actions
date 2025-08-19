@@ -101,7 +101,7 @@ def main():
     "--python-version",
     type=str,
     default=DEFAULT_PYTHON_VERSION,
-    help="The target Python version for the environment (e.g., '3.12').",
+    help="The target Python version(s) for the environment (e.g., '3.12', or '3.11,3.12').",
   )
   parser.add_argument(
     "--hardware",
@@ -121,8 +121,8 @@ def main():
   parser.add_argument(
     "--output-dir",
     type=str,
-    default="generated_env",
-    help="Directory to store cloned project, lock files, and built packages.",
+    default="generated_env_artifacts",
+    help="Directory to store the generated lock files and python package.",
   )
 
   args = parser.parse_args()

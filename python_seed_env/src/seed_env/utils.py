@@ -98,7 +98,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "{project_name}"
-version = "0.1.0"
+version = "0.0.1"
 description = "{project_name} is a pure Python package"
 readme = "README.md"
 license-files = ["LICENSE"]
@@ -109,8 +109,6 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["{project_name}*"]
-# Exclusion will be added later. Commented out here for now to run the maxtext integration tests.
-# exclude = ["{project_name}.tests*"]
 """
   try:
     pyproject_path = os.path.join(output_dir, "pyproject.toml")
