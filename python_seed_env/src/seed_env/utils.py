@@ -93,22 +93,31 @@ def generate_minimal_pyproject_toml(
 # limitations under the License.
 
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "{project_name}"
+description = "{project_name} is a simple, performant and scalable Jax LLM!"
 version = "0.0.1"
-description = "{project_name} is a pure Python package"
 readme = "README.md"
+license = "Apache-2.0"
 license-files = ["LICENSE"]
+keywords = ["llm", "jax", "llama", "mistral", "mixtral", "gemma", "deepseek"]
 requires-python = "=={python_version}.*"
 dependencies = [
 ]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python",
+]
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["{project_name}*"]
+# TODO(kanglant): Remove this once maxtext src-layout restructure done.
+[tool.hatch.build.targets.wheel]
+packages = ["{project_name}"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 """
   try:
     pyproject_path = os.path.join(output_dir, "pyproject.toml")
