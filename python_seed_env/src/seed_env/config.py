@@ -22,6 +22,7 @@ DEFAULT_HARDWARE = "tpu"
 DEFAULT_BUILD_PROJECT = False
 SUPPORTED_HARDWARE = ["tpu", "gpu"]
 
+# TODO(kanglant): Add a function to list deps following the pattern "nvidia-*"
 GPU_SPECIFIC_DEPS = [
   "nvidia-cublas-cu12",
   "nvidia-cuda-cupti-cu12",
@@ -36,6 +37,19 @@ GPU_SPECIFIC_DEPS = [
   "nvidia-nvjitlink-cu12",
   "nvidia-nvshmem-cu12",
   "nvidia-nvshmem-cu13",
+  "nvidia-cublas",
+  "nvidia-cuda-crt",
+  "nvidia-cuda-cupti",
+  "nvidia-cuda-nvcc",
+  "nvidia-cuda-nvrtc",
+  "nvidia-cuda-runtime",
+  "nvidia-cudnn-cu13",
+  "nvidia-cufft",
+  "nvidia-cusolver",
+  "nvidia-cusparse",
+  "nvidia-nccl-cu13",
+  "nvidia-nvjitlink",
+  "nvidia-nvvm",
   "jax-cuda12-plugin",
   "jax-cuda13-plugin",
   # "jax-cuda12-plugin[with-cuda]",
