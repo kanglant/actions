@@ -71,6 +71,7 @@ def build_seed_env(
       )
       raise
 
+  # TODO(kanglant): Remove this index url later; modify seed lock file before running uv add command
   command = [
     "uv",
     "add",
@@ -82,6 +83,8 @@ def build_seed_env(
     output_dir,
     "-r",
     seed_lock_file,
+    "--extra-index-url",
+    "https://pypi.nvidia.com",
   ]
   run_command(command)
 
