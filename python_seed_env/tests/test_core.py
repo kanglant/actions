@@ -57,10 +57,8 @@ def test_environment_seeder_init_invalid_seed():
 def test_seed_environment_remote(mocker, tmp_path):
   # Mock all external dependencies
   mock_download = mocker.patch(
-    "seed_env.core.download_remote_git_file", return_value=str(tmp_path / "host.txt")
-  )
-  mock_generate_pyproject = mocker.patch(
-    "seed_env.core.generate_minimal_pyproject_toml"
+      "seed_env.core.download_remote_git_file",
+      return_value=str(tmp_path / "host.txt"),
   )
   mock_merge_project_toml_files = mocker.patch("seed_env.core.merge_project_toml_files")
   mock_build_env = mocker.patch("seed_env.core.build_seed_env")
@@ -74,6 +72,11 @@ def test_seed_environment_remote(mocker, tmp_path):
   )
   mocker.patch("seed_env.core.Seeder", return_value=mock_seeder_instance)
 
+  # 4. Instantiate and run the seeder.
+  template_toml_path = tmp_path / "pyproject.toml"
+  template_toml_path.write_text(
+      '[project]\nname = "myproj"\nreadme = "README.md"\n[tool.hatch.build.targets.wheel]\npackages = ["myproj"]'
+  )
   seeder = EnvironmentSeeder(
     host_name="myproj",
     host_source_type="remote",
@@ -86,16 +89,17 @@ def test_seed_environment_remote(mocker, tmp_path):
     hardware="cpu",
     build_pypi_package=True,
     output_dir=str(tmp_path / "output"),
+    template_pyproject_toml=str(template_toml_path),
   )
   seeder.seed_environment()
 
   # Assert all mocks were called
   assert mock_download.called
-  assert mock_generate_pyproject.called
+  # assert mock_generate_pyproject.called
   assert mock_build_env.called
   assert mock_merge_project_toml_files.called
   assert mock_build_pypi.called
-  assert mock_seeder_instance.download_seed_lock_requirement.called
+  mock_seeder_instance.download_seed_lock_requirement.assert_called_with("3.12")
 
 
 def test_seed_environment_local_file_not_found(mocker, tmp_path):

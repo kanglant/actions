@@ -52,12 +52,9 @@ GPU_SPECIFIC_DEPS = [
   "nvidia-nvvm",
   "jax-cuda12-plugin",
   "jax-cuda13-plugin",
-  # "jax-cuda12-plugin[with-cuda]",
   "jax-cuda12-pjrt",
   "jax-cuda13-pjrt",
   "transformer-engine",
-  # "transformer-engine[jax]",
-  # "transformer-engine[pytorch]",
 ]
 
 TPU_SPECIFIC_DEPS = [
