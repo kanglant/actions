@@ -84,6 +84,12 @@ def main():
 
   # --- Common Arguments ---
   parser.add_argument(
+    "--template-pyproject-toml",
+    type=str,
+    default=None,
+    help="Path to a custom pyproject.toml file to use as a template.",
+  )
+  parser.add_argument(
     "--seed-config",
     type=str,
     default="jax_seed.yaml",
@@ -207,6 +213,7 @@ def main():
       hardware=args.hardware,
       build_pypi_package=args.build_pypi_package,
       output_dir=args.output_dir,
+      template_pyproject_toml=args.template_pyproject_toml,
     )
     # Core function
     host_env_seeder.seed_environment()

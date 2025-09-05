@@ -83,8 +83,6 @@ def build_seed_env(
     output_dir,
     "-r",
     seed_lock_file,
-    "--extra-index-url",
-    "https://pypi.nvidia.com",
   ]
   run_command(command)
 
@@ -102,8 +100,6 @@ def build_seed_env(
     host_requirements_file,
   ]
   run_command(command)
-
-  _remove_hardware_specific_deps(hardware, pyproject_file, output_dir)
 
   command = [
     "uv",
@@ -241,7 +237,10 @@ def replace_dependencies_in_project_toml(new_deps_list: list, filepath: str):
   This function reads the specified pyproject.toml file, finds the existing project dependencies array,
   and replaces it with the provided new_deps_list list. The updated content is then written back to the file.
   """
-  new_deps = 'dependencies = [\n    "' + '",\n    "'.join(new_deps_list) + '",\n]'
+  if new_deps_list:
+    new_deps = 'dependencies = [\n    "' + '",\n    "'.join(new_deps_list) + '",\n]'
+  else:
+    new_deps = "dependencies = []"
 
   dependencies_regex = re.compile(
     r"^dependencies\s*=\s*\[(\n+\s*.*,\s*)*[\n\r]*\]", re.MULTILINE
@@ -272,6 +271,37 @@ def replace_python_requirement_in_project_toml(min_python: str, filepath: str):
   with open(filepath, "r", encoding="utf-8") as f:
     content = f.read()
   new_content = min_python_regex.sub(new_requires_line, content)
+
+  with open(filepath, "w", encoding="utf-8") as f:
+    f.write(new_content)
+
+
+def set_exact_python_requirement_in_project_toml(python_version: str, filepath: str):
+  """
+  Sets or adds the requires-python section in a pyproject.toml file to an exact version series.
+
+  Args:
+      python_version (str): The target Python version (e.g., '3.12').
+      filepath (str): Path to the pyproject.toml file to update.
+  """
+  python_req_regex = re.compile(r'requires-python\s*=\s*".*?"')
+  project_header_regex = re.compile(r"^\[project\]", re.MULTILINE)
+  new_requires_line = f'requires-python = "=={python_version}.*"'
+
+  with open(filepath, "r", encoding="utf-8") as f:
+    content = f.read()
+
+  if python_req_regex.search(content):
+    # If 'requires-python' exists, substitute it.
+    new_content = python_req_regex.sub(new_requires_line, content)
+  elif project_header_regex.search(content):
+    # If it doesn't exist but [project] does, add it after the [project] header.
+    new_content = project_header_regex.sub(
+      f"[project]\n{new_requires_line}", content, count=1
+    )
+  else:
+    logging.error("No project table found in the template pyproject.toml.")
+    raise
 
   with open(filepath, "w", encoding="utf-8") as f:
     f.write(new_content)

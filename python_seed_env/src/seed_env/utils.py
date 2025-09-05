@@ -98,21 +98,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "{project_name}"
-description = "{project_name} is a simple, performant and scalable Jax LLM!"
 version = "0.0.1"
-readme = "README.md"
 license = "Apache-2.0"
-license-files = ["LICENSE"]
-keywords = ["llm", "jax", "llama", "mistral", "mixtral", "gemma", "deepseek"]
 requires-python = "=={python_version}.*"
 dependencies = [
 ]
 classifiers = [
-    "Development Status :: 4 - Beta",
     "Programming Language :: Python",
 ]
 
-# TODO(kanglant): Remove this once maxtext src-layout restructure done.
 [tool.hatch.build.targets.wheel]
 packages = ["{project_name}"]
 

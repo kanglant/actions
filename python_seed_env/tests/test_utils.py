@@ -159,7 +159,7 @@ version = "0.1.0"
   assert mock_os_remove.called
   assert mock_lock_to_lower_bound_project.called
   # Check for the expected uv remove command
-  assert mock_remove_hardware_specific_deps.call_count == 2
+  assert mock_remove_hardware_specific_deps.call_count == 1
 
   # Collect all commands passed to run_command
   commands = [call.args[0] for call in mock_run_command.call_args_list]
