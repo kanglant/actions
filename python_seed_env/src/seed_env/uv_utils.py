@@ -18,6 +18,7 @@ import re
 import os
 import toml
 import logging
+import shutil
 
 from collections import defaultdict
 from packaging.version import Version
@@ -245,10 +246,19 @@ def replace_dependencies_in_project_toml(new_deps_list: list, filepath: str):
   dependencies_regex = re.compile(
     r"^dependencies\s*=\s*\[(\n+\s*.*,\s*)*[\n\r]*\]", re.MULTILINE
   )
+  project_header_regex = re.compile(r"^\[project\]", re.MULTILINE)
 
   with open(filepath, "r", encoding="utf-8") as f:
     content = f.read()
-  new_content = dependencies_regex.sub(new_deps, content)
+
+  if dependencies_regex.search(content):
+    new_content = dependencies_regex.sub(new_deps, content)
+  elif project_header_regex.search(content):
+    # If it doesn't exist but [project] does, add it after the [project] header.
+    new_content = project_header_regex.sub(f"[project]\n{new_deps}", content, count=1)
+  else:
+    logging.error("No project table found in the template pyproject.toml.")
+    raise
 
   with open(filepath, "w", encoding="utf-8") as f:
     f.write(new_content)
@@ -470,7 +480,7 @@ def calculate_merged_deps(file_paths: list):
   return min_project_version, sorted(final_deps)
 
 
-def merge_project_toml_files(file_paths: list, output_dir: str):
+def merge_project_toml_files(file_paths: list, output_dir: str, template_path: str):
   """
   Merges multiple pyproject.toml files from file_paths into a single pyproject.toml at output_dir.
 
@@ -486,9 +496,14 @@ def merge_project_toml_files(file_paths: list, output_dir: str):
     raise ValueError("The list of file paths cannot be empty.")
 
   pyproject_file = os.path.join(output_dir, "pyproject.toml")
-  with open(file_paths[0], "r") as source_file:
-    with open(pyproject_file, "w") as destination_file:
-      destination_file.write(source_file.read())
+
+  if template_path:
+    logging.info(f"Using template {template_path}")
+    shutil.copy(template_path, pyproject_file)
+    # Clear any existing dependencies from the template to start fresh.
+    replace_dependencies_in_project_toml([], pyproject_file)
+  else:
+    shutil.copy(file_paths[0], pyproject_file)
 
   min_py_version, final_deps = calculate_merged_deps(file_paths)
   replace_python_requirement_in_project_toml(min_py_version, pyproject_file)

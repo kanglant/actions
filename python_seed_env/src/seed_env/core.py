@@ -16,18 +16,15 @@ limitations under the License.
 
 import os
 import logging
-import shutil
 import yaml
 from importlib.resources import files
 from seed_env.seeder import Seeder
 from seed_env.utils import generate_minimal_pyproject_toml
 from seed_env.git_utils import download_remote_git_file
 from seed_env.uv_utils import (
-  set_exact_python_requirement_in_project_toml,
   build_seed_env,
   build_pypi_package,
   merge_project_toml_files,
-  replace_dependencies_in_project_toml,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -225,20 +222,10 @@ class EnvironmentSeeder:
       )
 
       # 4. Generate a pyproject.toml file for the specified Python version.
-      if template_path:
-        logging.info(f"Using template {template_path} for Python {python_version}")
-        shutil.copy(template_path, versioned_pyproject_path)
-        # Clear any existing dependencies from the template to start fresh.
-        replace_dependencies_in_project_toml([], versioned_pyproject_path)
-        # Update the python version in the copied template to be specific for this build pass.
-        set_exact_python_requirement_in_project_toml(
-          python_version, versioned_pyproject_path
-        )
-      else:
-        logging.info(f"Generating minimal pyproject.toml for Python {python_version}")
-        generate_minimal_pyproject_toml(
-          self.host_name, python_version, versioned_output_dir
-        )
+      logging.info(f"Generating minimal pyproject.toml for Python {python_version}")
+      generate_minimal_pyproject_toml(
+        self.host_name, python_version, versioned_output_dir
+      )
 
       # Construct the host lock file name
       HOST_LOCK_FILE_NAME = f"{self.host_name.replace('-', '_')}_requirements_lock_{python_version.replace('.', '_')}.txt"
@@ -253,7 +240,9 @@ class EnvironmentSeeder:
 
     # Combine the individual pyproject.toml files from each python_version subdirectory
     # into a single pyproject.toml file at the output dir.
-    merge_project_toml_files(versioned_project_toml_files, self.output_dir)
+    merge_project_toml_files(
+      versioned_project_toml_files, self.output_dir, template_path
+    )
 
     # 6. Build pypi package
     # TODO(kanglant): Assume where the seed-env cli is called is the project root
