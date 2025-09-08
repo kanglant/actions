@@ -1,0 +1,41 @@
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+# Test
+[project]
+name = "MaxText"
+version = "0.0.1"
+license = "Apache-2.0"
+requires-python = ">=3.12"
+
+classifiers = [
+    "Programming Language :: Python",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["MaxText"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.uv.sources]
+tunix = { url = "https://github.com/google/tunix/archive/ee3229a43362fc1209cd477352309c86ca3496b0.zip" }
+google-jetstream = { url = "https://github.com/AI-Hypercomputer/JetStream/archive/daedc21c393f23449fb54ddc4f75fca34348ea9c.zip" }
+mlperf-logging = { url = "https://github.com/mlcommons/logging/archive/909ca852015cbc204f8f6d39555dc3f257378818.zip" }
+qwix = { url = "https://github.com/google/qwix/archive/9fc58cdbb5e344aff5be2922cb6b7292f3454f60.zip" }
+datasets = { url = "https://github.com/huggingface/datasets/archive/6790e138c00b87a1ddc72184f89e7814cf784360.zip" }
+seqio = { url = "https://github.com/kanglant/seqio/archive/638c9323d7f23ef16549882cce2a2bcd2d559bb5.zip" }

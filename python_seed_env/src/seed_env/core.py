@@ -240,7 +240,9 @@ class EnvironmentSeeder:
 
     # Combine the individual pyproject.toml files from each python_version subdirectory
     # into a single pyproject.toml file at the output dir.
-    merge_project_toml_files(versioned_project_toml_files, self.output_dir, template_path)
+    merge_project_toml_files(
+      versioned_project_toml_files, self.output_dir, template_path
+    )
 
     # 6. Build pypi package
     # TODO(kanglant): Assume where the seed-env cli is called is the project root

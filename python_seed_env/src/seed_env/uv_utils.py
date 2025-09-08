@@ -255,9 +255,7 @@ def replace_dependencies_in_project_toml(new_deps_list: list, filepath: str):
     new_content = dependencies_regex.sub(new_deps, content)
   elif project_header_regex.search(content):
     # If it doesn't exist but [project] does, add it after the [project] header.
-    new_content = project_header_regex.sub(
-      f"[project]\n{new_deps}", content, count=1
-    )
+    new_content = project_header_regex.sub(f"[project]\n{new_deps}", content, count=1)
   else:
     logging.error("No project table found in the template pyproject.toml.")
     raise
