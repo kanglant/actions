@@ -366,7 +366,7 @@ def _remove_hardware_specific_deps(hardware: str, pyproject_file: str, output_di
   if hardware == "tpu":
     hardware_specific_deps_list = GPU_SPECIFIC_DEPS.copy()
   elif hardware == "gpu":
-    hardware_specific_deps_list = (TPU_SPECIFIC_DEPS.copy(),)
+    hardware_specific_deps_list = TPU_SPECIFIC_DEPS.copy()
   else:
     logging.warning(f"Unknown hardware {hardware}. Please use tpu or gpu.")
     return
