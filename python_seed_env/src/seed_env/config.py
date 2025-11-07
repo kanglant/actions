@@ -27,6 +27,7 @@ TENSORFLOW_DEPS = [
   "wrapt",
   "tensorboard",
   "protobuf",
+  "setuptools",
 ]
 
 TPU_SPECIFIC_DEPS = [
