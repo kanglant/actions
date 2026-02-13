@@ -32,9 +32,8 @@ jobs:
       - name: "Run clang-format on error action"
         id: check-format
         uses: ./ci_clangformat/
-        # Test if the default filepaths work and the check fails as expected with unformatted files
-        # with:
-        #   filepaths: "tests/ci_clangformat/unformatted_files/**.cc,tests/ci_clangformat/unformatted_files/**.h"
+        with:
+          filepaths: "tests/ci_clangformat/unformatted_files/**.{h,cc}"
         continue-on-error: true
       - name: "Check clang-format result failed as expected"
         if: steps.check-format.outcome == 'failure'

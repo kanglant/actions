@@ -13,6 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+// This file is copied from https://github.com/jax-ml/jax/blob/main/jaxlib/callback.h;
+// it is used to test the clang-format action.
+
 #ifndef JAXLIB_CALLBACK_H_
 #define JAXLIB_CALLBACK_H_
 

@@ -19,9 +19,9 @@ inputs:
     required: true
     default: "20.1.5"
   filepaths:
-    description: 'Optional comma-separated list of file paths to check. If not provided, all changed .cc and .h files will be checked.'
+    description: 'Optional space or comma separated list of file paths to check. If not provided, all changed .cc and .h files will be checked.'
     required: false
-    default: "*.cc *.h"
+    default: "*.{h,cc}"
 
 runs:
   using: "composite"

@@ -13,6 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+// This file is copied from https://github.com/jax-ml/jax/blob/main/jaxlib/config.cc;
+// it is used to test the clang-format action.
+
 #include "jaxlib/config.h"
 
 #include <Python.h>
