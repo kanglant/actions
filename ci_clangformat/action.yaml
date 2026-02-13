@@ -46,6 +46,7 @@ runs:
       if [[ "${{ github.event_name }}" == "pull_request" ]]; then
         # For PRs, compare against the origin's base branch
         DIFF_BASE="origin/$TARGET_BRANCH"
+        git fetch origin "$TARGET_BRANCH"
       elif [[ "${{ github.event_name }}" == "push" ]]; then
         if [[ "$TARGET_BRANCH" == "0000000000000000000000000000000000000000" || -z "$TARGET_BRANCH" ]]; then
           # Fallback for new branches or missing 'before' SHA
