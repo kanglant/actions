@@ -39,7 +39,7 @@ runs:
       ACTION_DEFAULT_CLANG_FORMAT: ${{ github.action_path }}.clang-format.default
       CLANG_FORMAT_VERSION: ${{ inputs.clang_format_version }}
       # Use base_ref for PRs, or the 'before' SHA for pushes
-      TARGET_BRANCH: ${{ github.base_ref || github.event.before }}
+      TARGET_SHA: ${{ github.event.before }}
       FILE_PATHS: ${{ inputs.filepaths }}
     run: |
       FILE_PATTERNS="$FILE_PATHS"
@@ -51,17 +51,19 @@ runs:
 
       # Determine the correct base for the git diff
       if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-        # For PRs, compare against the origin's base branch
-        DIFF_BASE="origin/$TARGET_BRANCH"
-        # Fetch the base branch to ensure it's available for comparison
-        git fetch origin "$TARGET_BRANCH"
+        # In a PR, HEAD is the merge commit.
+        # HEAD^1 (or HEAD~1) is the base branch (e.g., main).
+        # HEAD^2 is the tip of the PR branch.
+        DIFF_BASE="HEAD~1"
       elif [[ "${{ github.event_name }}" == "push" ]]; then
-        if [[ "$TARGET_BRANCH" == "0000000000000000000000000000000000000000" || -z "$TARGET_BRANCH" ]]; then
+        if [[ "$TARGET_SHA" == "0000000000000000000000000000000000000000" || -z "$TARGET_SHA" ]]; then
           # Fallback for new branches or missing 'before' SHA
           DIFF_BASE="HEAD~1"
         else
           # For pushes, compare against the previous commit SHA
-          DIFF_BASE="$TARGET_BRANCH"
+          DIFF_BASE="$TARGET_SHA"
+          # In case multiple commits are pushed, fetch the target branch to ensure the base commit is available
+          git fetch origin "$TARGET_SHA" --depth=1 || true
         fi
       else
         echo "::error::Unsupported event type: ${GITHUB_EVENT_NAME}"
