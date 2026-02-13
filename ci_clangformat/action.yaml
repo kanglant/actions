@@ -19,7 +19,7 @@ inputs:
     required: true
     default: "20.1.5"
   filepaths:
-    description: 'Optional space or comma separated list of file paths to check. If not provided, all changed .cc and .h files will be checked.'
+    description: 'Optional space-separated list of file paths to check. If not provided, all changed .cc and .h files will be checked.'
     required: false
     default: "*.h *.cc"
 
@@ -42,7 +42,7 @@ runs:
       TARGET_BRANCH: ${{ github.base_ref || github.event.before }}
       FILE_PATHS: ${{ inputs.filepaths }}
     run: |
-      FILE_PATTERNS=$(echo "$FILE_PATHS" | tr ',' ' ')
+      FILE_PATTERNS="$FILE_PATHS"
 
       CLANG_FORMAT_COMMON_ARGS="--dry-run --Werror --verbose"
 
