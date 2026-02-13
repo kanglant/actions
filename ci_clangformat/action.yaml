@@ -18,6 +18,9 @@ inputs:
     description: 'The clang-format version to use.'
     required: true
     default: "20.1.5"
+  filepaths:
+    description: 'Optional comma-separated list of file paths to check. If not provided, all changed .cc and .h files will be checked.'
+    required: false
 
 runs:
   using: "composite"
@@ -36,7 +39,14 @@ runs:
       # Use base_ref for PRs, or the 'before' SHA for pushes
       TARGET_BRANCH: ${{ github.base_ref || github.event.before }}
     run: |
-      FILE_PATTERNS="*.cc *.h"
+      if [[ -n "${{ inputs.filepaths }}" ]]; then
+        echo "::notice::Using provided file paths: ${{ inputs.filepaths }}"
+        FILE_PATTERNS=$(echo "${{ inputs.filepaths }}" | tr ',' ' ')
+      else
+        echo "::notice::No file paths provided. Defaulting to all changed .cc and .h files."
+        FILE_PATTERNS="*.cc *.h"
+      fi
+
       CLANG_FORMAT_COMMON_ARGS="--dry-run --Werror --verbose"
 
       # Add this line to resolve the dubious ownership error
@@ -46,6 +56,7 @@ runs:
       if [[ "${{ github.event_name }}" == "pull_request" ]]; then
         # For PRs, compare against the origin's base branch
         DIFF_BASE="origin/$TARGET_BRANCH"
+        # Fetch the base branch to ensure it's available for comparison
         git fetch origin "$TARGET_BRANCH"
       elif [[ "${{ github.event_name }}" == "push" ]]; then
         if [[ "$TARGET_BRANCH" == "0000000000000000000000000000000000000000" || -z "$TARGET_BRANCH" ]]; then
