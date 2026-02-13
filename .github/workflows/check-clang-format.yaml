@@ -35,4 +35,4 @@ jobs:
       - name: "Run clang-format action"
         uses: ./ci_clangformat/
         with:
-          filepaths: "tests/ci_clangformat/formatted_files/**.{h,cc}"
+          filepaths: "tests/ci_clangformat/formatted_files/*.{h,cc}"

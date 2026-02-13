@@ -36,8 +36,11 @@ jobs:
         id: check-format
         uses: ./ci_clangformat/
         with:
-          filepaths: "tests/ci_clangformat/unformatted_files/**.{h,cc}"
+          filepaths: "tests/ci_clangformat/unformatted_files/*.{h,cc}"
         continue-on-error: true
       - name: "Check clang-format result failed as expected"
         if: steps.check-format.outcome == 'failure'
         run: echo "Clang-format check failed as expected."
+      - name: "Check clang-format result did not fail as expected"
+        if: steps.check-format.outcome != 'failure'
+        run: echo "::error::Clang-format check did not fail as expected." && exit 1
