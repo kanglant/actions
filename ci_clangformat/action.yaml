@@ -21,6 +21,7 @@ inputs:
   filepaths:
     description: 'Optional comma-separated list of file paths to check. If not provided, all changed .cc and .h files will be checked.'
     required: false
+    default: "*.cc *.h"
 
 runs:
   using: "composite"
@@ -38,14 +39,9 @@ runs:
       CLANG_FORMAT_VERSION: ${{ inputs.clang_format_version }}
       # Use base_ref for PRs, or the 'before' SHA for pushes
       TARGET_BRANCH: ${{ github.base_ref || github.event.before }}
+      FILE_PATHS: ${{ inputs.filepaths }}
     run: |
-      if [[ -n "${{ inputs.filepaths }}" ]]; then
-        echo "::notice::Using provided file paths: ${{ inputs.filepaths }}"
-        FILE_PATTERNS=$(echo "${{ inputs.filepaths }}" | tr ',' ' ')
-      else
-        echo "::notice::No file paths provided. Defaulting to all changed .cc and .h files."
-        FILE_PATTERNS="*.cc *.h"
-      fi
+      FILE_PATTERNS=$(echo "$FILE_PATHS" | tr ',' ' ')
 
       CLANG_FORMAT_COMMON_ARGS="--dry-run --Werror --verbose"
 
