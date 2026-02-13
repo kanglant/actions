@@ -36,7 +36,7 @@ jobs:
         id: check-format
         uses: ./ci_clangformat/
         with:
-          filepaths: "tests/ci_clangformat/unformatted_files/*.{h,cc}"
+          filepaths: "tests/ci_clangformat/unformatted_files/**.cc,tests/ci_clangformat/unformatted_files/**.h"
         continue-on-error: true
       - name: "Check clang-format result failed as expected"
         if: steps.check-format.outcome == 'failure'
