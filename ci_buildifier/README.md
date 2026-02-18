@@ -17,3 +17,30 @@ and then commit the formatted code to your pull request.
 This action expects `buildifier` to be available in your workflow's runtime
 environment. If `buildifier` is not pre-installed in your chosen runner image
 or container, you will need to install it before this action runs.
+
+## Usage
+
+Add this step to your GitHub Actions workflow:
+
+```yaml
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Buildifier Check
+        uses: ./ci_buildifier/
+```
+
+## Inputs
+
+*   **`filepaths`**: (Optional) A space-separated list of file paths or glob patterns to check.
+If not specified, the action defaults to checking all modified `BUILD`, `WORKSPACE`, `MODULE.bazel`, and `.bzl` files.
+
+### Example with custom filepaths
+
+```yaml
+- name: Run Buildifier Check
+  uses: ./ci_buildifier/
+  with:
+    filepaths: "path/to/my/BUILD path/to/others/*.bzl"
+```
