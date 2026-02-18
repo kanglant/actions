@@ -14,6 +14,18 @@
 name: "Run buildifier"
 description: 'Action to run buildifier on changed build files'
 
+inputs:
+  filepaths:
+    description: 'Optional space-separated list of file paths to check. If not provided, all bazel will be checked.'
+    required: false
+    default: >
+      :(glob)**/BUILD
+      :(glob)**/BUILD.bazel
+      :(glob)**/WORKSPACE
+      :(glob)**/WORKSPACE.bazel
+      :(glob)**/MODULE.bazel
+      :(glob)**/*.bzl
+
 runs:
   using: "composite"
   steps:
